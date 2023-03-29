@@ -11,3 +11,7 @@ require 'rspec'
 require 'ruby-link-checker'
 
 RSpec.configure(&:raise_errors_for_deprecations!)
+
+Dir[File.join(File.dirname(__FILE__), 'support', '**/*.rb')].each do |file|
+    require file
+  end

@@ -2,8 +2,8 @@
 
 require 'spec_helper'
 
-describe Ruby::LinkChecker do
+describe LinkChecker do
   it 'has a version' do
-    expect(Ruby::LinkChecker::VERSION).not_to be_nil
+    expect(LinkChecker::VERSION).not_to be_nil
   end
 end

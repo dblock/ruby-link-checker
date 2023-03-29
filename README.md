@@ -1,11 +1,11 @@
-Ruby::LinkChecker
-=================
+Ruby LinkChecker
+================
 
 [![Gem Version](http://img.shields.io/gem/v/ruby-link-checker.svg)](http://badge.fury.io/rb/ruby-link-checker)
 [![Build Status](https://github.com/dblock/ruby-link-checker/workflows/test/badge.svg?branch=main)](https://github.com/dblock/ruby-link-checker/actions)
 [![Code Climate](https://codeclimate.com/github/dblock/ruby-link-checker.svg)](https://codeclimate.com/github/dblock/ruby-link-checker)
 
-Fast Ruby link checker, heavily inspired from [html-proofer](https://github.com/gjtorikian/html-proofer). Uses [Typhoeus](https://typhoeus.github.io/) to make HTTP requests in parallel. 
+Work in progress on a fast Ruby link checker, heavily inspired from [html-proofer](https://github.com/gjtorikian/html-proofer). Currently uses `Net::HTTP`, but will add [Typhoeus](https://typhoeus.github.io/) to make HTTP requests in parallel.
 
 ## Table of Contents
 

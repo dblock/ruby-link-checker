@@ -5,7 +5,7 @@ require 'ruby-link-checker/version'
 
 Gem::Specification.new do |s|
   s.name = 'ruby-link-checker'
-  s.version = Ruby::LinkChecker::VERSION
+  s.version = LinkChecker::VERSION
   s.authors = ['Daniel Doubrovkine']
   s.email = 'dblock@dblock.org'
   s.platform = Gem::Platform::RUBY
