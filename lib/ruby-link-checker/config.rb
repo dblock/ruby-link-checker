@@ -13,7 +13,7 @@ module LinkChecker
     attr_accessor(*Config::ATTRIBUTES)
 
     def reset
-      self.methods = %w[GET HEAD]
+      self.methods = %w[HEAD GET]
       self.user_agent = "Ruby Link Checker/#{LinkChecker::VERSION}"
       self.logger = nil
     end

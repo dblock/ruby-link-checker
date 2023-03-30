@@ -30,16 +30,32 @@ module LinkChecker
       callback(:error, *args)
     end
 
+    def redirect!(*args)
+      callback(:redirect, *args)
+    end
+
     def check!(uri, options = {})
       result = nil
+      method = nil
       uri = URI(uri) unless uri.is_a?(URI)
+      redirects = [uri]
       _checking! uri, options do |ctx|
-        methods.each do |method|
-          result = _check!(uri, method, ctx, options)
-          logger.info "#{uri}: #{result}"
-          if result.success?
-            success! uri, result
-            return result
+        methods.each do |_method|
+          loop do
+            method = _method
+            result = _check!(uri, method, ctx, options)
+            logger.info "#{' ' * (redirects.count - 1)}#{result}"
+            if result.redirect?
+              redirect! uri, result
+              uri = URI.join(uri, result.redirect_to)
+              raise "Redirect loop: #{result.redirect_to}" if redirects.include?(uri)
+              redirects << uri
+            elsif result.success?
+              success! uri, result
+              return result
+            else
+              break
+            end
           end
         end
       end
@@ -48,7 +64,7 @@ module LinkChecker
     rescue StandardError => e
       logger.warn "#{uri}: #{e}"
       error! uri, e
-      ResultError.new uri, e
+      ResultError.new uri, method, e
     end
 
     private

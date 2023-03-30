@@ -1,21 +1,38 @@
 module LinkChecker
   class Result
-    attr_accessor :uri
+    attr_accessor :uri, :method
 
-    def initialize(uri)
+    def initialize(uri, method)
       @uri = uri
+      @method = method
     end
 
     def success?
-      raise NotImplementedError
+      false
     end
 
     def failure?
-      raise NotImplementedError
+      false
     end
 
     def error?
-      raise NotImplementedError
+      false
+    end
+
+    def redirect?
+      false
+    end
+
+    def redirect_to
+      nil
+    end
+
+    def code
+      nil
+    end
+
+    def error
+      nil
     end
 
     def to_s
@@ -23,55 +40,21 @@ module LinkChecker
                    'OK'
                  elsif failure?
                    'FAIL'
+                 elsif redirect?
+                   'REDIRECT'
                  else
                    'ERROR'
                  end
-      "#{uri}: #{status_s}"
-    end
-  end
-
-  class ResultSuccess < Result
-    def success?
-      true
-    end
-
-    def failure?
-      false
-    end
-
-    def error?
-      false
-    end
-  end
-
-  class ResultFailure < Result
-    def success?
-      false
-    end
-
-    def failure?
-      true
-    end
-
-    def error?
-      false
+      "#{method} #{uri}: #{status_s} (#{code})"
     end
   end
 
   class ResultError < Result
     attr_accessor :error
 
-    def initialize(uri, error)
+    def initialize(uri, method, error)
       @error = error
-      super uri
-    end
-
-    def success?
-      false
-    end
-
-    def failure?
-      false
+      super uri, method
     end
 
     def error?

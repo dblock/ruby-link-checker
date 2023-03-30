@@ -11,8 +11,8 @@ module LinkChecker
         def _check!(uri, method, ctx, _options = {})
           request = http_request(uri, method)
           response = ctx.request(request)
-          logger.info "#{method} #{uri}: #{response.code}"
-          Result.new uri, request, response
+          logger.debug "#{method} #{uri}: #{response.code}"
+          Result.new uri, method, request, response
         end
 
         private

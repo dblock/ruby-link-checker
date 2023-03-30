@@ -12,7 +12,7 @@ shared_context 'a link checker' do
       described_class.new(methods: ['GET'])
     end
 
-    context 'a valid URI that returns a 200', vcr: { cassette_name: 'example.org/get/200' } do
+    context 'a valid URI that returns a 200', vcr: { cassette_name: '200' } do
       let(:url) { 'https://www.example.org' }
       let(:result) { subject.check!(url) }
 
@@ -44,7 +44,7 @@ shared_context 'a link checker' do
       end
     end
 
-    context 'a valid URI that returns a 404', vcr: { cassette_name: 'example.org/get/404' } do
+    context 'a valid URI that returns a 404', vcr: { cassette_name: '404' } do
       let(:url) { 'https://www.example.org/does-not-exist.html' }
       let(:result) { subject.check!(url) }
 
@@ -74,6 +74,103 @@ shared_context 'a link checker' do
           expect(result.success?).to be false
           expect(result.failure?).to be true
           expect(subject).to have_received(:called!).with(:failure)
+        end
+      end
+    end
+
+    context 'a redirect on HEAD followed by a 403', vcr: { cassette_name: '301+403' } do
+      let(:url) { 'https://appbase.io' }
+      let(:result) { subject.check!(url) }
+
+      context 'with callbacks' do
+        before do
+          allow(subject).to receive(:called!)
+          subject.on :success do
+            subject.called!(:success)
+          end
+          subject.on :failure do
+            subject.called!(:failure)
+          end
+          subject.on :error do
+            subject.called!(:error)
+          end
+          subject.on :redirect do
+            subject.called!(:redirect)
+          end
+        end
+
+        it 'calls redirect callback' do
+          expect(result.success?).to be false
+          expect(result.failure?).to be true
+          expect(subject).to have_received(:called!).with(:redirect)
+          expect(subject).to have_received(:called!).with(:failure)
+          expect(subject).not_to have_received(:called!).with(:success)
+        end
+      end
+    end
+
+    context 'a redirect on HEAD followed by a 200', vcr: { cassette_name: '301+200' } do
+      let(:url) { 'https://dblock.org' }
+      let(:result) { subject.check!(url) }
+
+      context 'with callbacks' do
+        before do
+          allow(subject).to receive(:called!)
+          subject.on :success do
+            subject.called!(:success)
+          end
+          subject.on :failure do
+            subject.called!(:failure)
+          end
+          subject.on :error do
+            subject.called!(:error)
+          end
+          subject.on :redirect do
+            subject.called!(:redirect)
+          end
+        end
+
+        it 'calls redirect callback' do
+          expect(result.success?).to be true
+          expect(result.failure?).to be false
+          expect(result.redirect?).to be false
+          expect(subject).to have_received(:called!).with(:redirect)
+          expect(subject).to have_received(:called!).with(:success)
+          expect(subject).not_to have_received(:called!).with(:failure)
+        end
+      end
+    end
+
+    context 'an infinite redirect loop', vcr: { cassette_name: '301+301' } do
+      let(:url) { 'https://example.org' }
+      let(:result) { subject.check!(url) }
+
+      context 'with callbacks' do
+        before do
+          allow(subject).to receive(:called!)
+          subject.on :success do
+            subject.called!(:success)
+          end
+          subject.on :failure do
+            subject.called!(:failure)
+          end
+          subject.on :error do
+            subject.called!(:error)
+          end
+          subject.on :redirect do
+            subject.called!(:redirect)
+          end
+        end
+
+        it 'calls redirect callback' do
+          expect(result.success?).to be false
+          expect(result.failure?).to be false
+          expect(result.error?).to be true
+          expect(result.redirect?).to be false
+          expect(subject).to have_received(:called!).with(:redirect).twice
+          expect(subject).to have_received(:called!).with(:error)
+          expect(subject).not_to have_received(:called!).with(:failure)
+          expect(subject).not_to have_received(:called!).with(:success)
         end
       end
     end
@@ -118,9 +215,8 @@ shared_context 'a link checker' do
       described_class.new(methods: %w[HEAD GET])
     end
 
-    context 'a valid URI that fails on HEAD and succeeds on GET',
-            vcr: { cassette_name: 'www.nuget.org/head+get/404+200' } do
-      let(:url) { 'https://www.nuget.org/packages/OpenSearch.Client' }
+    context 'a valid URI that fails on HEAD and succeeds on GET', vcr: { cassette_name: '404+200' } do
+      let(:url) { 'https://www.example.org/packages/' }
       let(:result) { subject.check!(url) }
 
       it 'succeeds' do
@@ -153,8 +249,8 @@ shared_context 'a link checker' do
       end
     end
 
-    context 'a valid URI that fails both on HEAD and GET', vcr: { cassette_name: 'www.nuget.org/head+get/404+404' } do
-      let(:url) { 'https://www.nuget.org/packages/Does.Not.Exist' }
+    context 'a valid URI that fails both on HEAD and GET', vcr: { cassette_name: '404+404' } do
+      let(:url) { 'https://www.example.org/packages/' }
       let(:result) { subject.check!(url) }
 
       it 'fails' do

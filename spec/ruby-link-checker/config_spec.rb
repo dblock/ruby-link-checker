@@ -16,7 +16,7 @@ describe LinkChecker::Config do
 
   describe 'defaults' do
     it 'sets methods' do
-      expect(LinkChecker.config.methods).to eq %w[GET HEAD]
+      expect(LinkChecker.config.methods).to eq %w[HEAD GET]
     end
     it 'sets user agent' do
         expect(LinkChecker.config.user_agent).to eq "Ruby Link Checker/#{LinkChecker::VERSION}"
