@@ -3,12 +3,13 @@ module LinkChecker
     include LinkChecker::Callbacks
 
     attr_reader :uri
-    attr_reader :method, :logger
+    attr_reader :method, :logger, :options
 
     def initialize(uri, method, options = {})
       @uri = uri
       @method = method
       @logger = options[:logger]
+      @options = options
     end
 
     def run!
@@ -20,14 +21,15 @@ module LinkChecker
     include LinkChecker::Callbacks
 
     attr_reader :result
-    attr_reader :uri
+    attr_reader :uri, :checker
 
     def initialize(uri, methods, options = {})
       @uri = uri
-      @methods = methods
-      @options = options
+      @methods = methods.dup
+      @options = options.dup
       @task_klass = options[:task_klass]
       @logger = options[:logger]
+      @checker = options[:checker]
       @redirects = [uri]
       raise ArgumentError, :tasks_klass unless @task_klass && @task_klass < ::LinkChecker::Task
     end
@@ -49,6 +51,7 @@ module LinkChecker
         failure! @result
       end
     rescue StandardError => e
+      logger.error("#{self}##{__method__}") { e }
       _handle_result ResultError.new(uri, method, e)
     end
 
@@ -63,6 +66,7 @@ module LinkChecker
       end
       task.run!
     rescue StandardError => e
+      logger.error("#{self}##{__method__}") { e }
       _handle_result ResultError.new(uri, method, e)
     end
 
@@ -86,6 +90,7 @@ module LinkChecker
         execute!
       end
     rescue StandardError => e
+      logger.error("#{self}##{__method__}") { e }
       _handle_result ResultError.new(result.uri, result.method, e)
     end
   end

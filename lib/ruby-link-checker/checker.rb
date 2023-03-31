@@ -4,6 +4,7 @@ module LinkChecker
   class Checker
     include LinkChecker::Callbacks
 
+    attr_reader :results
     attr_accessor(*Config::ATTRIBUTES)
 
     def initialize(options = {})
@@ -12,6 +13,7 @@ module LinkChecker
       end
       raise ArgumentError, "Missing methods." if methods&.none?
       @logger ||= options[:logger] || LinkChecker::Config.logger || LinkChecker::Logger.default
+      @results = { error: [], failure: [], success: [] }
     end
 
     def task_klass
@@ -22,9 +24,18 @@ module LinkChecker
     end
 
     def check!(uri, options = {})
-      tasks = Tasks.new(uri, methods, options.merge(logger: @logger, task_klass: task_klass))
+      tasks = Tasks.new(uri, methods, options.merge(checker: self, logger: @logger, task_klass: task_klass))
       tasks.on do |event, *args|
         callback event, *args
+      end
+      tasks.on :error do |result|
+        results[:error] << result
+      end
+      tasks.on :failure do |result|
+        results[:failure] << result
+      end
+      tasks.on :success do |result|
+        results[:success] << result
       end
       tasks.execute!
     end

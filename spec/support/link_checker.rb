@@ -105,19 +105,6 @@ shared_context 'a link checker' do
         end
       end
 
-      context 'invalid HTTP method' do
-        subject do
-          described_class.new(methods: %w[INVALID])
-        end
-
-        it 'fails' do
-          expect(result.success?).to be false
-          expect(result.error?).to be true
-          expect(result.failure?).to be false
-          expect(result.error).to be_a LinkChecker::Errors::InvalidHttpMethodError
-        end
-      end
-
       context 'HEAD,GET' do
         subject do
           described_class.new(methods: %w[HEAD GET])

@@ -2,7 +2,7 @@
 http_interactions:
 - request:
     method: head
-    uri: https://www.example.org/
+    uri: https://www.example.org
     body:
       encoding: US-ASCII
       string: ''
