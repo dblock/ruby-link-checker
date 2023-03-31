@@ -141,7 +141,7 @@ shared_context 'a link checker' do
       end
     end
 
-    context 'an infinite redirect loop', vcr: { cassette_name: '301+301' } do
+    context 'a redirect loop', vcr: { cassette_name: '301+301' } do
       let(:url) { 'https://example.org' }
       let(:result) { subject.check!(url) }
 
