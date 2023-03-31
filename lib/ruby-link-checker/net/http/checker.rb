@@ -25,11 +25,7 @@ module LinkChecker
         end
       end
 
-      class Checker < LinkChecker::Checker
-        def initialize(options = {})
-          super(options.merge(task_klass: LinkChecker::Net::HTTP::Task))
-        end
-      end
+      class Checker < LinkChecker::Checker; end
     end
   end
 end

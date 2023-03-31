@@ -11,12 +11,18 @@ module LinkChecker
         send("#{key}=", options[key] || LinkChecker.config.send(key))
       end
       raise ArgumentError, "Missing methods." if methods&.none?
-      @logger ||= LinkChecker::Config.logger || LinkChecker::Logger.default
-      @task_klass = options[:task_klass]
+      @logger ||= options[:logger] || LinkChecker::Config.logger || LinkChecker::Logger.default
+    end
+
+    def task_klass
+      @task_klass ||= begin
+        module_name = self.class.name.split("::")[...-1].join('::')
+        Object.const_get("#{module_name}::Task")
+      end
     end
 
     def check!(uri, options = {})
-      tasks = Tasks.new(uri, methods, options.merge(task_klass: @task_klass, logger: @logger))
+      tasks = Tasks.new(uri, methods, options.merge(logger: @logger, task_klass: task_klass))
       tasks.on do |event, *args|
         callback event, *args
       end
