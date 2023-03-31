@@ -3,7 +3,13 @@ module LinkChecker
     module Hydra
       class Task < ::LinkChecker::Task
         def run!
-          request = ::Typhoeus::Request.new(uri, method: method, followlocation: false)
+          request = ::Typhoeus::Request.new(uri, {
+                                              method: method,
+                                              followlocation: false,
+                                              headers: {
+                                                'User-Agent' => options[:checker].user_agent
+                                              }
+                                            })
           request.on_complete do |response|
             logger.debug "#{method} #{uri}: #{response.code}"
             result! Result.new(uri, method, request, response)

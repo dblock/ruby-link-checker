@@ -27,6 +27,10 @@ module LinkChecker
       nil
     end
 
+    def request_headers
+      {}
+    end
+
     def code
       nil
     end

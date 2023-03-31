@@ -26,6 +26,10 @@ module LinkChecker
           end
         end
 
+        def request_headers
+          request.options[:headers]
+        end
+
         def redirect_to
           return nil unless response
 

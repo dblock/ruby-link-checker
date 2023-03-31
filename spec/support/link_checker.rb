@@ -34,6 +34,10 @@ shared_context 'a link checker' do
 
       context 'check' do
         context 'a valid URI that returns a 200', vcr: { cassette_name: '200' } do
+          it 'sets user agent' do
+            expect(result.request_headers['User-Agent']).to eq "Ruby Link Checker/#{LinkChecker::VERSION}"
+          end
+
           it 'succeeds' do
             expect(result.success?).to be true
             expect(result.error?).to be false
