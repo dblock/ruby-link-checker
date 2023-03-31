@@ -166,6 +166,7 @@ shared_context 'a link checker' do
           expect(result.success?).to be false
           expect(result.failure?).to be false
           expect(result.error?).to be true
+          expect(result.error).to be_a LinkChecker::Errors::RedirectLoopError
           expect(result.redirect?).to be false
           expect(subject).to have_received(:called!).with(:redirect).twice
           expect(subject).to have_received(:called!).with(:error)
@@ -207,6 +208,22 @@ shared_context 'a link checker' do
           expect(subject).not_to have_received(:called!).with(:success)
         end
       end
+    end
+  end
+
+  context 'invalid HTTP method' do
+    subject do
+      described_class.new(methods: %w[INVALID])
+    end
+
+    let(:url) { 'https://www.example.org' }
+    let(:result) { subject.check!(url) }
+
+    it 'fails' do
+      expect(result.success?).to be false
+      expect(result.error?).to be true
+      expect(result.failure?).to be false
+      expect(result.error).to be_a LinkChecker::Errors::InvalidHttpMethodError
     end
   end
 

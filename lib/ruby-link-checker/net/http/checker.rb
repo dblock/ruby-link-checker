@@ -24,7 +24,7 @@ module LinkChecker
           when 'HEAD'
             ::Net::HTTP::Head.new(uri)
           else
-            raise ArgumentError, "Unsupported method #{method}."
+            raise LinkChecker::Errors::InvalidHttpMethodError, method
           end
         end
       end

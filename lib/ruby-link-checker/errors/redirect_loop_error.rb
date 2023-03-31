@@ -3,6 +3,8 @@
 module LinkChecker
   module Errors
     class RedirectLoopError < BaseError
+      attr_accessor :urls
+
       def initialize(urls)
         @urls = urls
         super "Redirect loop: #{urls.join(' -> ')}."
