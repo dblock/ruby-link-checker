@@ -10,7 +10,7 @@ Benchmark.bm do |benchmark|
   #   checker = LinkChecker::Net::HTTP::Checker.new
   #   checker.logger.level = Logger::INFO
   #   input.each do |url|
-  #     checker.check! url
+  #     checker.check url
   #   end
   #   checker.results.each_pair do |bucket, results|
   #     puts "#{bucket}: #{results.size}"
@@ -18,16 +18,12 @@ Benchmark.bm do |benchmark|
   # end
 
   benchmark.report('LinkChecker::Typhoeus::Hydra::Checker') do
-    checker = LinkChecker::Typhoeus::Hydra::Checker.new(
-      hydra: {
-        max_concurrency: 3
-      }
-    )
+    checker = LinkChecker::Typhoeus::Hydra::Checker.new
     checker.logger.level = Logger::INFO
     input.each do |url|
-      checker.check! url
+      checker.check url
     end
-    checker.hydra.run
+    checker.run
     checker.results.each_pair do |bucket, results|
       puts "#{bucket}: #{results.size}"
     end

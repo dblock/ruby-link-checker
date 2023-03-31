@@ -8,18 +8,22 @@ module LinkChecker
             logger.debug "#{method} #{uri}: #{response.code}"
             result! Result.new(uri, method, request, response)
           end
-          options[:checker].hydra.tap do |hydra|
-            hydra.queue(request)
-          end
+          options[:checker]._queue(request)
         end
       end
 
       class Checker < LinkChecker::Checker
-        attr_reader :hydra
-
         def initialize(options = {})
           super options
-          @hydra = ::Typhoeus::Hydra.new(options[:hydra] || {})
+          @hydra = ::Typhoeus::Hydra.new(options[:hydra] || { max_concurrency: 10 })
+        end
+
+        def run
+          @hydra.run
+        end
+
+        def _queue(request)
+          @hydra.queue(request)
         end
       end
     end

@@ -7,7 +7,7 @@ shared_context 'a link checker' do
     expect(subject.user_agent).to eq 'user/agent'
   end
 
-  context 'check!' do
+  context 'check' do
     let(:url) { 'https://www.example.org' }
     let(:result) do
       @result
@@ -24,7 +24,7 @@ shared_context 'a link checker' do
     end
 
     before do
-      subject.check!(url)
+      subject.check(url)
     end
 
     context 'GET' do
@@ -32,7 +32,7 @@ shared_context 'a link checker' do
         described_class.new(methods: ['GET'])
       end
 
-      context 'check!' do
+      context 'check' do
         context 'a valid URI that returns a 200', vcr: { cassette_name: '200' } do
           it 'succeeds' do
             expect(result.success?).to be true
