@@ -6,7 +6,7 @@ module LinkChecker
     def self.default
       return @default if @default
 
-      logger = new STDOUT
+      logger = Logger.new(STDOUT)
       logger.level = Logger::WARN
       @default = logger
     end

@@ -2,7 +2,7 @@
 http_interactions:
 - request:
     method: head
-    uri: https://www.example.org/packages/
+    uri: https://www.example.org/
     body:
       encoding: US-ASCII
       string: ''
@@ -51,7 +51,7 @@ http_interactions:
   recorded_at: Wed, 29 Mar 2023 17:48:07 GMT
 - request:
     method: get
-    uri: https://www.example.org/packages/
+    uri: https://www.example.org/
     body:
       encoding: US-ASCII
       string: ''

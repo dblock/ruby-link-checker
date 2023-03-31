@@ -2,7 +2,7 @@
 http_interactions:
 - request:
     method: get
-    uri: https://www.example.org/does-not-exist.html
+    uri: https://www.example.org/
     body:
       encoding: US-ASCII
       string: ''

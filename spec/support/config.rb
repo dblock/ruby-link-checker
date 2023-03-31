@@ -1,5 +1,8 @@
 RSpec.configure do |config|
-    config.after do
-        LinkChecker::Config.reset
-    end
+  config.before do
+    LinkChecker::Logger.default.level = Logger::DEBUG
   end
+  config.after do
+    LinkChecker::Config.reset
+  end
+end

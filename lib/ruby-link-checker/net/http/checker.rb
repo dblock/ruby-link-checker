@@ -1,18 +1,14 @@
 module LinkChecker
   module Net
     class HTTP
-      class Checker < LinkChecker::Checker
-        def _checking!(uri, options = {})
+      class Task < ::LinkChecker::Task
+        def run!
           ::Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-            yield http, options
+            request = http_request(uri, method)
+            response = http.request(request)
+            logger.debug "#{method} #{uri}: #{response.code}"
+            result! Result.new(uri, method, request, response)
           end
-        end
-
-        def _check!(uri, method, ctx, _options = {})
-          request = http_request(uri, method)
-          response = ctx.request(request)
-          logger.debug "#{method} #{uri}: #{response.code}"
-          Result.new uri, method, request, response
         end
 
         private
@@ -26,6 +22,12 @@ module LinkChecker
           else
             raise LinkChecker::Errors::InvalidHttpMethodError, method
           end
+        end
+      end
+
+      class Checker < LinkChecker::Checker
+        def initialize(options = {})
+          super(options.merge(task_klass: LinkChecker::Net::HTTP::Task))
         end
       end
     end
