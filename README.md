@@ -22,7 +22,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [Logger](#logger)
     - [User-Agent](#user-agent)
   - [Global Configuration](#global-configuration)
-  - [Events](#events)
+  - [Callbacks and Events](#callbacks-and-events)
 - [Contributing](#contributing)
 - [Copyright and License](#copyright-and-license)
 
@@ -101,8 +101,8 @@ links.each do |url|
   checker.check url
 end
 
-# examine failures as they come
-checker.on :failure do |result|
+# examine failures and errors as they come
+checker.on :error, :failure do |result|
   puts "FAIL: #{result.uri}: #{result.response.code}"
 end    
 
@@ -180,13 +180,17 @@ LinkChecker.configure do |config|
 end
 ```
 
-### Events
+### Callbacks and Events
 
 Events enable processing of results as they become available.
 
 ```ruby
 checker.on :result do |result|
-  puts result
+  puts result # any result
+end
+
+checker.on :error, :failure do |result|
+  puts result # error or failure
 end
 ```
 

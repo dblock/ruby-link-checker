@@ -10,9 +10,11 @@ module LinkChecker
       @delegates ||= []
     end
 
-    def on(event = nil, &block)
-      if event
-        callbacks[event.to_s] << block
+    def on(*events, &block)
+      if events && Array(events).any?
+        Array(events).each do |event|
+          callbacks[event.to_s] << block
+        end
       else
         delegates << block
       end
