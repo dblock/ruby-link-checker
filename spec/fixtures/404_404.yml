@@ -20,29 +20,10 @@ http_interactions:
       code: 404
       message: Not Found
     headers:
-      Cache-Control:
-      - private
       Transfer-Encoding:
       - chunked
       Content-Type:
       - text/html; charset=utf-8
-      Access-Control-Expose-Headers:
-      - Request-Context
-      Set-Cookie:
-      - ARRAffinity=f5590b5fc5ddc907852bca51af5ce38a05e4326a28cf5ad695273889f35aef77;Path=/;HttpOnly;Secure;Domain=www.nuget.org
-      - ARRAffinitySameSite=f5590b5fc5ddc907852bca51af5ce38a05e4326a28cf5ad695273889f35aef77;Path=/;HttpOnly;SameSite=None;Secure;Domain=www.nuget.org
-      Request-Context:
-      - appId=cid-v1:338f6804-b1a9-4fe3-bba7-c93064e7ae7b
-      Content-Security-Policy:
-      - frame-ancestors 'none'
-      X-Frame-Options:
-      - DENY
-      X-Xss-Protection:
-      - 1; mode=block
-      X-Content-Type-Options:
-      - nosniff
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains
       Date:
       - Wed, 29 Mar 2023 17:48:07 GMT
     body:
@@ -75,23 +56,6 @@ http_interactions:
       - chunked
       Content-Type:
       - text/html; charset=utf-8
-      Access-Control-Expose-Headers:
-      - Request-Context
-      Set-Cookie:
-      - ARRAffinity=975e68d7348238685e42012d3f6cbc00234a5b18d5298412155d1333efcc22de;Path=/;HttpOnly;Secure;Domain=www.nuget.org
-      - ARRAffinitySameSite=975e68d7348238685e42012d3f6cbc00234a5b18d5298412155d1333efcc22de;Path=/;HttpOnly;SameSite=None;Secure;Domain=www.nuget.org
-      Request-Context:
-      - appId=cid-v1:338f6804-b1a9-4fe3-bba7-c93064e7ae7b
-      Content-Security-Policy:
-      - frame-ancestors 'none'
-      X-Frame-Options:
-      - DENY
-      X-Xss-Protection:
-      - 1; mode=block
-      X-Content-Type-Options:
-      - nosniff
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains
       Date:
       - Wed, 29 Mar 2023 17:48:07 GMT
     body:

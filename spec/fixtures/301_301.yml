@@ -25,7 +25,7 @@ http_interactions:
       Content-Length:
       - '162'
       Server:
-      - GitHub.com
+      - Example.org
       Content-Type:
       - text/html
       Location:
@@ -84,43 +84,13 @@ http_interactions:
       Content-Length:
       - '2428'
       Server:
-      - GitHub.com
+      - Example.org
       Content-Type:
       - text/html; charset=utf-8
       Last-Modified:
       - Sat, 09 Jun 2018 03:06:53 GMT
       Access-Control-Allow-Origin:
       - "*"
-      Etag:
-      - W/"5b1b444d-1e6d"
-      Expires:
-      - Thu, 30 Mar 2023 17:41:18 GMT
-      Cache-Control:
-      - max-age=600
-      X-Proxy-Cache:
-      - MISS
-      X-Github-Request-Id:
-      - 5854:2EB7:5CF0D4:76FD82:6425C766
-      Accept-Ranges:
-      - bytes
-      Date:
-      - Thu, 30 Mar 2023 17:33:09 GMT
-      Via:
-      - 1.1 varnish
-      Age:
-      - '48'
-      X-Served-By:
-      - cache-lga21931-LGA
-      X-Cache:
-      - HIT
-      X-Cache-Hits:
-      - '1'
-      X-Timer:
-      - S1680197590.628091,VS0,VE1
-      Vary:
-      - Accept-Encoding
-      X-Fastly-Request-Id:
-      - 37258c7acbe77621daffe95d14326358cd85c24d
     body:
       encoding: UTF-8
       string: "<!doctype html>\n<html>\n<head>\n    <title>Example Domain</title>\n\n

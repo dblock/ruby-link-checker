@@ -30,14 +30,12 @@ http_interactions:
       - text/html; charset=UTF-8
       Date:
       - Wed, 29 Mar 2023 16:16:22 GMT
-      Etag:
-      - '"3147526947+gzip"'
       Expires:
       - Wed, 05 Apr 2023 16:16:22 GMT
       Last-Modified:
       - Thu, 17 Oct 2019 07:18:26 GMT
       Server:
-      - ECS (nyb/1D07)
+      - Example.org
       Vary:
       - Accept-Encoding
       X-Cache:

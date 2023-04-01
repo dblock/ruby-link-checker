@@ -28,21 +28,6 @@ http_interactions:
       - text/html; charset=utf-8
       Access-Control-Expose-Headers:
       - Request-Context
-      Set-Cookie:
-      - ARRAffinity=41d3c965c9e2315c0c1a022a787866a0158b3dd7de79015a8b3a0517db60e823;Path=/;HttpOnly;Secure;Domain=www.nuget.org
-      - ARRAffinitySameSite=41d3c965c9e2315c0c1a022a787866a0158b3dd7de79015a8b3a0517db60e823;Path=/;HttpOnly;SameSite=None;Secure;Domain=www.nuget.org
-      Request-Context:
-      - appId=cid-v1:338f6804-b1a9-4fe3-bba7-c93064e7ae7b
-      Content-Security-Policy:
-      - frame-ancestors 'none'
-      X-Frame-Options:
-      - DENY
-      X-Xss-Protection:
-      - 1; mode=block
-      X-Content-Type-Options:
-      - nosniff
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains
       Date:
       - Wed, 29 Mar 2023 17:48:06 GMT
     body:
@@ -79,21 +64,6 @@ http_interactions:
       - Accept-Encoding
       Access-Control-Expose-Headers:
       - Request-Context
-      Set-Cookie:
-      - ARRAffinity=41d3c965c9e2315c0c1a022a787866a0158b3dd7de79015a8b3a0517db60e823;Path=/;HttpOnly;Secure;Domain=www.nuget.org
-      - ARRAffinitySameSite=41d3c965c9e2315c0c1a022a787866a0158b3dd7de79015a8b3a0517db60e823;Path=/;HttpOnly;SameSite=None;Secure;Domain=www.nuget.org
-      Request-Context:
-      - appId=cid-v1:338f6804-b1a9-4fe3-bba7-c93064e7ae7b
-      Content-Security-Policy:
-      - frame-ancestors 'none'
-      X-Frame-Options:
-      - DENY
-      X-Xss-Protection:
-      - 1; mode=block
-      X-Content-Type-Options:
-      - nosniff
-      Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains
       Date:
       - Wed, 29 Mar 2023 17:48:06 GMT
     body:

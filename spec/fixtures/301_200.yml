@@ -25,7 +25,7 @@ http_interactions:
       Content-Length:
       - '162'
       Server:
-      - GitHub.com
+      - Example.org
       Content-Type:
       - text/html
       Location:
@@ -36,22 +36,6 @@ http_interactions:
       - bytes
       Date:
       - Thu, 30 Mar 2023 17:31:18 GMT
-      Via:
-      - 1.1 varnish
-      Age:
-      - '0'
-      X-Served-By:
-      - cache-lga21940-LGA
-      X-Cache:
-      - MISS
-      X-Cache-Hits:
-      - '0'
-      X-Timer:
-      - S1680197478.486257,VS0,VE13
-      Vary:
-      - Accept-Encoding
-      X-Fastly-Request-Id:
-      - 93650b188f56f89ffbd8f0134b191a4a0790e7ef
     body:
       encoding: UTF-8
       string: "<html>\r\n<head><title>301 Moved Permanently</title></head>\r\n<body>\r\n<center><h1>301
@@ -82,43 +66,19 @@ http_interactions:
       Content-Length:
       - '2428'
       Server:
-      - GitHub.com
+      - Example.org
       Content-Type:
       - text/html; charset=utf-8
       Last-Modified:
       - Sat, 09 Jun 2018 03:06:53 GMT
       Access-Control-Allow-Origin:
       - "*"
-      Etag:
-      - W/"5b1b444d-1e6d"
       Expires:
       - Thu, 30 Mar 2023 17:41:18 GMT
-      Cache-Control:
-      - max-age=600
-      X-Proxy-Cache:
-      - MISS
-      X-Github-Request-Id:
-      - 5854:2EB7:5CF0D4:76FD82:6425C766
-      Accept-Ranges:
-      - bytes
       Date:
       - Thu, 30 Mar 2023 17:31:18 GMT
-      Via:
-      - 1.1 varnish
-      Age:
-      - '0'
-      X-Served-By:
-      - cache-lga21940-LGA
-      X-Cache:
-      - MISS
-      X-Cache-Hits:
-      - '0'
-      X-Timer:
-      - S1680197479.503877,VS0,VE12
       Vary:
       - Accept-Encoding
-      X-Fastly-Request-Id:
-      - 9bd5c94495b0288fe7bcb7b0dadc259f33b62803
     body:
       encoding: UTF-8
       string: "<!doctype html>\n<html>\n<head>\n    <title>Example Domain</title>\n\n

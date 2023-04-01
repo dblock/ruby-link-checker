@@ -32,18 +32,10 @@ http_interactions:
       - Thu, 30 Mar 2023 18:29:41 GMT
       Location:
       - https://www.dblock.org/
-      Report-To:
-      - '{"endpoints":[{"url":"https:\/\/a.nel.cloudflare.com\/report\/v3?s=VkQDpR6v2QMVYb4nBy4KmDyDyXPp%2Fr3EJ0nfJIlfUmXz0ybamWB6jfhhmiCK%2FxFFrAQ08N7BwJ1as9bxSqLMMKgOcVzhVT4Ja%2Fx3eeahSMH0eLavTrqxgxgMLN8Z"}],"group":"cf-nel","max_age":604800}'
-      Nel:
-      - '{"success_fraction":0,"report_to":"cf-nel","max_age":604800}'
       Vary:
       - Accept-Encoding
       Server:
-      - cloudflare
-      Cf-Ray:
-      - 7b021382d8ba8c36-EWR
-      Alt-Svc:
-      - h3=":443"; ma=86400, h3-29=":443"; ma=86400
+      - Example.org
     body:
       encoding: UTF-8
       string: ''
@@ -69,7 +61,7 @@ http_interactions:
       message: Forbidden
     headers:
       Server:
-      - cloudflare
+      - Example.org
       Date:
       - Thu, 30 Mar 2023 17:29:41 GMT
       Content-Type:
@@ -78,8 +70,6 @@ http_interactions:
       - '151'
       Connection:
       - keep-alive
-      Cf-Ray:
-      - 7b021382e8d38c36-EWR
     body:
       encoding: UTF-8
       string: "<html>\r\n<head><title>403 Forbidden</title></head>\r\n<body>\r\n<center><h1>403
