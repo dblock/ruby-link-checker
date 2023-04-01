@@ -37,7 +37,7 @@ module LinkChecker
       end
     rescue StandardError => e
       logger.error("#{self}##{__method__}") { e }
-      _handle_result ResultError.new(uri, method, e)
+      _handle_result ResultError.new(uri, method, e, options)
     end
 
     private
@@ -64,7 +64,7 @@ module LinkChecker
       task.run!
     rescue StandardError => e
       logger.error("#{self}##{__method__}") { e }
-      _handle_result ResultError.new(uri, method, e)
+      _handle_result ResultError.new(uri, method, e, options)
     end
 
     def _handle_result(result)
@@ -88,7 +88,7 @@ module LinkChecker
       end
     rescue StandardError => e
       logger.error("#{self}##{__method__}") { e }
-      _handle_result ResultError.new(result.uri, result.method, e)
+      _handle_result ResultError.new(result.uri, result.method, e, options)
     end
   end
 end

@@ -57,9 +57,9 @@ module LinkChecker
   class ResultError < Result
     attr_accessor :error
 
-    def initialize(uri, method, error)
+    def initialize(uri, method, error, options = {})
       @error = error
-      super uri, method
+      super uri, method, options
     end
 
     def error?

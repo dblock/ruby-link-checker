@@ -25,7 +25,27 @@ shared_context 'a link checker' do
         end
 
         context 'check' do
-          context 'a valid URI that returns a 200', vcr: { cassette_name: '200' } do
+          context '200', vcr: { cassette_name: '200' } do
+            it 'passes metadata' do
+              expect(result.options).to eq(foo: 'bar')
+            end
+          end
+
+          context '404', vcr: { cassette_name: '404' } do
+            it 'passes metadata' do
+              expect(result.options).to eq(foo: 'bar')
+            end
+          end
+
+          context 'error', vcr: { cassette_name: '404' } do
+            let(:url) { '\/invalid-url' }
+
+            it 'passes metadata' do
+              expect(result.options).to eq(foo: 'bar')
+            end
+          end
+
+          context 'a redirect loop', vcr: { cassette_name: '301+301' } do
             it 'passes metadata' do
               expect(result.options).to eq(foo: 'bar')
             end
