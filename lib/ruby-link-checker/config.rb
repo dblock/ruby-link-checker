@@ -8,6 +8,7 @@ module LinkChecker
       methods
       user_agent
       logger
+      retries
     ].freeze
 
     attr_accessor(*Config::ATTRIBUTES)
@@ -16,6 +17,13 @@ module LinkChecker
       self.methods = %w[HEAD GET]
       self.user_agent = "Ruby Link Checker/#{LinkChecker::VERSION}"
       self.logger = nil
+      self.retries = 0
+    end
+
+    def retries=(value)
+      raise ArgumentError, "Invalid number of retries: #{value}" unless value.is_a?(Integer) && value >= 0
+
+      @retries = value
     end
   end
 

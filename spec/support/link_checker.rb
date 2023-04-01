@@ -103,7 +103,7 @@ shared_context 'a link checker' do
             end
           end
 
-          context 'a valid URI that returns a 404', vcr: { cassette_name: '404' } do
+          context 'a 404', vcr: { cassette_name: '404', allow_playback_repeats: true } do
             it 'fails' do
               expect(result.success?).to be false
               expect(result.error?).to be false
@@ -111,6 +111,54 @@ shared_context 'a link checker' do
               expect(result.uri).to eq URI(url)
               expect(result.response.code.to_i).to eq 404
               expect(subject).to have_received(:called!).with(:failure, result)
+            end
+
+            context 'with 0 retries' do
+              subject do
+                described_class.new(methods: ['GET'], retries: 0)
+              end
+
+              it 'fails' do
+                expect(result.success?).to be false
+                expect(result.error?).to be false
+                expect(result.failure?).to be true
+                expect(result.uri).to eq URI(url)
+                expect(result.response.code.to_i).to eq 404
+                expect(subject).to have_received(:called!).with(:failure, result).once
+                expect(subject).not_to have_received(:called!).with(:retry, anything)
+              end
+            end
+
+            context 'with 1 retry' do
+              subject do
+                described_class.new(methods: ['GET'], retries: 1)
+              end
+
+              it 'fails' do
+                expect(result.success?).to be false
+                expect(result.error?).to be false
+                expect(result.failure?).to be true
+                expect(result.uri).to eq URI(url)
+                expect(result.response.code.to_i).to eq 404
+                expect(subject).to have_received(:called!).with(:failure, result).once
+                expect(subject).to have_received(:called!).with(:retry, anything).once
+              end
+            end
+
+            context 'with 2 retries' do
+              subject do
+                described_class.new(methods: ['GET'], retries: 2)
+              end
+
+              it 'fails' do
+                expect(result.success?).to be false
+                expect(result.error?).to be false
+                expect(result.failure?).to be true
+                expect(result.uri).to eq URI(url)
+                expect(result.response.code.to_i).to eq 404
+                expect(subject).to have_received(:called!).with(:failure, result).once
+                expect(subject).to have_received(:called!).with(:retry, anything).twice
+              end
             end
           end
 
@@ -145,6 +193,33 @@ shared_context 'a link checker' do
               expect(subject).to have_received(:called!).with(:error, result)
               expect(subject).not_to have_received(:called!).with(:failure, result)
               expect(subject).not_to have_received(:called!).with(:success, result)
+            end
+          end
+
+          context 'a retry on 429', vcr: {
+            cassette_name: '429+200',
+            match_requests_on: [lambda { |_request, recorded_request|
+              @matched ||= []
+              if @matched.size + 1 === recorded_request.headers['Index'].first
+                @matched << recorded_request
+                true
+              else
+                false
+              end
+            }]
+          } do
+            subject do
+              described_class.new(methods: ['GET'], retries: 1)
+            end
+
+            it 'calls a retry callback' do
+              expect(result.success?).to be true
+              expect(result.failure?).to be false
+              expect(result.redirect?).to be false
+              expect(subject).to have_received(:called!).with(:retry, anything)
+              expect(subject).to have_received(:called!).with(:success, result)
+              expect(subject).not_to have_received(:called!).with(:failure, anything)
+              expect(subject).not_to have_received(:called!).with(:error, anything)
             end
           end
 

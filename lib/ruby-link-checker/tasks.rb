@@ -2,11 +2,11 @@ module LinkChecker
   class Tasks
     include LinkChecker::Callbacks
 
-    attr_reader :result
-    attr_reader :uri, :checker
+    attr_reader :result, :uri
 
     def initialize(checker, task_klass, uri, methods, options = {})
       @uri = uri
+      @methods_left = methods.dup
       @methods = methods.dup
       @task_klass = task_klass
       @checker = checker
@@ -21,14 +21,17 @@ module LinkChecker
     end
 
     def execute!
-      if methods.any?
-        method = methods.shift
+      if methods_left.any?
+        method = methods_left.shift
         @uri = URI(@uri) unless @uri.is_a?(URI)
         _queue_task(uri, method, options)
+      elsif retry?
+        @methods_left = @methods
+        @retries_left -= 1
+        retry! @result
+        execute!
       elsif @result && result.error?
         error! @result
-      elsif @result && result.failure?
-        failure! @result
       else
         failure! @result
       end
@@ -39,7 +42,19 @@ module LinkChecker
 
     private
 
-    attr_reader :logger, :methods, :options, :task_klass, :redirects
+    attr_reader :logger, :methods_left, :options, :task_klass, :redirects, :checker
+
+    def retries
+      checker.retries
+    end
+
+    def retries_left
+      @retries_left ||= retries
+    end
+
+    def retry?
+      retries_left > 0
+    end
 
     def _queue_task(uri, method, options = {})
       task = new_task(uri, method, options)

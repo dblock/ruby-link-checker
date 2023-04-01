@@ -18,6 +18,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [LinkChecker::Typhoeus::Hydra](#linkcheckertyphoeushydra)
     - [LinkChecker::Net::HTTP](#linkcheckernethttp)
   - [Options](#options)
+    - [Retries](#retries)
     - [Results](#results)
     - [Methods](#methods)
     - [Logger](#logger)
@@ -142,6 +143,14 @@ end
 ```
 
 ### Options
+
+#### Retries
+
+By default link checkers do not retry. You can set a number of times to retry all errors and failures with `retries`.
+
+```ruby
+checker = LinkChecker::Net::HTTP::Checker.new(retry: 1)
+```
 
 #### Results
 
