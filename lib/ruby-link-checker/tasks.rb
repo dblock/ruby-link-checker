@@ -6,6 +6,7 @@ module LinkChecker
 
     def initialize(checker, task_klass, uri, methods, options = {})
       @uri = uri
+      @retries_left = checker.retries
       @methods_left = methods.dup
       @methods = methods.dup
       @task_klass = task_klass
@@ -21,15 +22,14 @@ module LinkChecker
     end
 
     def execute!
-      if methods_left.any?
-        method = methods_left.shift
-        @uri = URI(@uri) unless @uri.is_a?(URI)
-        _queue_task(uri, method, options)
-      elsif retry?
-        @methods_left = @methods
+      if retry?
         @retries_left -= 1
         retry! @result
-        execute!
+        _queue_task(uri, method, options)
+      elsif methods_left.any?
+        @method = methods_left.shift
+        @uri = URI(@uri) unless @uri.is_a?(URI)
+        _queue_task(uri, method, options)
       elsif @result && result.error?
         error! @result
       else
@@ -42,10 +42,14 @@ module LinkChecker
 
     private
 
-    attr_reader :logger, :methods_left, :options, :task_klass, :redirects, :checker
+    attr_reader :logger, :methods_left, :options, :task_klass, :redirects, :checker, :method
 
     def retries
       checker.retries
+    end
+
+    def first_time?
+      !!method.nil?
     end
 
     def retries_left
@@ -53,7 +57,7 @@ module LinkChecker
     end
 
     def retry?
-      retries_left > 0
+      !first_time? && retries_left > 0
     end
 
     def _queue_task(uri, method, options = {})

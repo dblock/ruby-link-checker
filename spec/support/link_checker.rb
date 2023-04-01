@@ -276,6 +276,27 @@ shared_context 'a link checker' do
               expect(subject).to have_received(:called!).with(:failure, result).once
             end
           end
+
+          context 'a retry on 429', vcr: {
+            cassette_name: '429+429+200',
+            match_requests_on: [lambda { |request, recorded_request|
+              @matched ||= []
+              if recorded_request.method == request.method && @matched.size + 1 === recorded_request.headers['Index'].first
+                @matched << recorded_request
+                true
+              else
+                false
+              end
+            }]
+          } do
+            subject do
+              described_class.new(methods: %w[HEAD GET], retries: 1)
+            end
+
+            it 'executes HEAD twice, then falls back to GET' do
+              expect(result.success?).to be true
+            end
+          end
         end
       end
     end
