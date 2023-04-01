@@ -24,7 +24,13 @@ module LinkChecker
     end
 
     def check(uri, options = {})
-      tasks = Tasks.new(uri, methods, options.merge(checker: self, logger: @logger, task_klass: task_klass))
+      tasks = Tasks.new(
+        self,
+        task_klass,
+        uri,
+        methods,
+        options
+      )
       tasks.on do |event, *args|
         callback event, *args
       end

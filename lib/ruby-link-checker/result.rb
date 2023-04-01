@@ -1,10 +1,11 @@
 module LinkChecker
   class Result
-    attr_accessor :uri, :method
+    attr_accessor :uri, :method, :options, :checker
 
-    def initialize(uri, method)
+    def initialize(uri, method, options = {})
       @uri = uri
       @method = method
+      @options = options
     end
 
     def success?

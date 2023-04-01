@@ -11,17 +11,18 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
 ## Table of Contents
 
 - [Usage](#usage)
-- [Dependencies](#dependencies)
-- [Basic Usage](#basic-usage)
-- [Checkers](#checkers)
-  - [LinkChecker::Typhoeus::Hydra](#linkcheckertyphoeushydra)
-  - [LinkChecker::Net::HTTP](#linkcheckernethttp)
-- [Options](#options)
-  - [Methods](#methods)
-  - [Logger](#logger)
-  - [User-Agent](#user-agent)
-- [Global Configuration](#global-configuration)
-- [Events](#events)
+  - [Dependencies](#dependencies)
+  - [Basic Usage](#basic-usage)
+  - [Passing Options](#passing-options)
+  - [Checkers](#checkers)
+    - [LinkChecker::Typhoeus::Hydra](#linkcheckertyphoeushydra)
+    - [LinkChecker::Net::HTTP](#linkcheckernethttp)
+  - [Options](#options)
+    - [Methods](#methods)
+    - [Logger](#logger)
+    - [User-Agent](#user-agent)
+  - [Global Configuration](#global-configuration)
+  - [Events](#events)
 - [Contributing](#contributing)
 - [Copyright and License](#copyright-and-license)
 
@@ -58,7 +59,19 @@ checker.run
 
 # display buckets of results
 checker.results.each_pair do |bucket, results|
-   puts "#{bucket}: #{results.size}"
+  puts "#{bucket}: #{results.size}"
+end
+```
+
+### Passing Options
+
+You can pipe custom options through `check` and retrieve them in events as follows.
+
+```ruby
+checker.check 'https://www.example.org', { location: 'page.html' }
+
+checker.on :success do |result|
+  result.options # contains { location: 'page.html' }
 end
 ```
 

@@ -7,8 +7,8 @@ describe LinkChecker::Typhoeus::Hydra::Checker do
     class Task < LinkChecker::Typhoeus::Hydra::Task; end
 
     class LinkChecker < LinkChecker::Typhoeus::Hydra::Checker
-      def check(url)
-        super url
+      def check(url, options = {})
+        super url, options
         @hydra.run
       end
     end

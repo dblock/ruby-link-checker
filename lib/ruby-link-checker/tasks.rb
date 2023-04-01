@@ -1,41 +1,23 @@
 module LinkChecker
-  class Task
-    include LinkChecker::Callbacks
-
-    attr_reader :uri
-    attr_reader :method, :logger, :options
-
-    def initialize(uri, method, options = {})
-      @uri = uri
-      @method = method
-      @logger = options[:logger]
-      @options = options
-    end
-
-    def run!
-      raise NotImplementedError
-    end
-  end
-
   class Tasks
     include LinkChecker::Callbacks
 
     attr_reader :result
     attr_reader :uri, :checker
 
-    def initialize(uri, methods, options = {})
+    def initialize(checker, task_klass, uri, methods, options = {})
       @uri = uri
       @methods = methods.dup
-      @options = options.dup
-      @task_klass = options[:task_klass]
-      @logger = options[:logger]
-      @checker = options[:checker]
+      @task_klass = task_klass
+      @checker = checker
+      @logger = checker.logger
       @redirects = [uri]
+      @options = options
       raise ArgumentError, :tasks_klass unless @task_klass && @task_klass < ::LinkChecker::Task
     end
 
     def new_task(uri, method, options)
-      task_klass.new(uri, method, options)
+      task_klass.new(checker, uri, method, options)
     end
 
     def execute!
