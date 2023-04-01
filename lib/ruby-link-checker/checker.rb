@@ -13,7 +13,7 @@ module LinkChecker
       end
       raise ArgumentError, "Missing methods." if methods&.none?
       @logger ||= options[:logger] || LinkChecker::Config.logger || LinkChecker::Logger.default
-      @results = { error: [], failure: [], success: [] }
+      @results = { error: [], failure: [], success: [] } unless options.key?(:results) && !options[:results]
     end
 
     def task_klass
@@ -32,16 +32,8 @@ module LinkChecker
         options
       )
       tasks.on do |event, *args|
+        results[event] << args.first if @results && %i[error failure success].include?(event)
         callback event, *args
-      end
-      tasks.on :error do |result|
-        results[:error] << result
-      end
-      tasks.on :failure do |result|
-        results[:failure] << result
-      end
-      tasks.on :success do |result|
-        results[:success] << result
       end
       tasks.execute!
     end

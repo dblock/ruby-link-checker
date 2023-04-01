@@ -43,6 +43,26 @@ shared_context 'a link checker' do
       end
     end
 
+    context 'without results' do
+      before do
+        subject.check(url, foo: 'bar')
+      end
+
+      context 'GET' do
+        subject do
+          described_class.new(results: false, methods: ['GET'])
+        end
+
+        context 'check' do
+          context 'a valid URI that returns a 200', vcr: { cassette_name: '200' } do
+            it 'passes metadata' do
+              expect(subject.results).to be_nil
+            end
+          end
+        end
+      end
+    end
+
     context 'without metadata' do
       before do
         subject.check(url)
@@ -61,6 +81,16 @@ shared_context 'a link checker' do
 
             it 'returns all metadata' do
               expect(result.options).to eq({})
+            end
+
+            it 'returns results' do
+              expect(subject.results).to eq(
+                error: [],
+                failure: [],
+                success: [
+                  result
+                ]
+              )
             end
 
             it 'succeeds' do

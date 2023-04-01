@@ -18,6 +18,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [LinkChecker::Typhoeus::Hydra](#linkcheckertyphoeushydra)
     - [LinkChecker::Net::HTTP](#linkcheckernethttp)
   - [Options](#options)
+    - [Results](#results)
     - [Methods](#methods)
     - [Logger](#logger)
     - [User-Agent](#user-agent)
@@ -141,6 +142,28 @@ end
 ```
 
 ### Options
+
+#### Results
+
+By default checkers collect results. 
+
+```ruby
+checker = LinkChecker::Net::HTTP::Checker.new(results: false)
+...
+checker.run
+
+checker.results # => { error: [...], failure: [...], success: [...] }
+```
+
+You can disable this with `results: false`.
+
+```ruby
+checker = LinkChecker::Net::HTTP::Checker.new(results: false)
+...
+checker.run
+
+checker.results # => nil
+```
 
 #### Methods
 

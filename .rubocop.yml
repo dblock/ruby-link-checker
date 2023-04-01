@@ -8,10 +8,6 @@ AllCops:
   Exclude:
     - vendor/**/*
 
-Metrics/BlockLength:
-  Exclude:
-    - 'spec/**/*_spec.rb'
-
 Style/HashEachMethods:
   Enabled: true
 
@@ -20,5 +16,8 @@ Style/HashTransformKeys:
 
 Style/HashTransformValues:
   Enabled: true
+
+Metrics:
+  Enabled: false
 
 inherit_from: .rubocop_todo.yml
