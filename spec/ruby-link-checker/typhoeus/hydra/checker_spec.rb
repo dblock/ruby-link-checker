@@ -22,6 +22,25 @@ describe LinkChecker::Typhoeus::Hydra::Checker do
   describe TestLinkChecker::LinkChecker do
     it_behaves_like 'a link checker'
 
+    context 'with timeout options', vcr: { cassette_name: '200' } do
+      before do
+        LinkChecker::Typhoeus::Hydra.configure do |config|
+          config.timeout = 5
+          config.connecttimeout = 10
+        end
+        expect(Typhoeus::Request).to receive(:new).with(
+          URI(url),
+          hash_including(timeout: 5, connecttimeout: 10)
+        ).and_call_original
+      end
+
+      include_context 'with url'
+
+      it 'creates requests with a default timeout' do
+        expect(result.success?).to be true
+      end
+    end
+
     context 'timeout', vcr: { cassette_name: '200' } do
       before do
         allow_any_instance_of(Typhoeus::Response).to receive(:timed_out?).and_return(true)

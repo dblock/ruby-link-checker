@@ -2,6 +2,7 @@
 
 module LinkChecker
   class Checker
+    include LinkChecker::Config
     include LinkChecker::Callbacks
 
     attr_reader :results
@@ -36,16 +37,6 @@ module LinkChecker
         callback event, *args
       end
       tasks.execute!
-    end
-
-    class << self
-      def configure
-        block_given? ? yield(Config) : Config
-      end
-
-      def config
-        Config
-      end
     end
   end
 end

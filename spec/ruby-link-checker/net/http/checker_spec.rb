@@ -9,7 +9,28 @@ describe LinkChecker::Net::HTTP::Checker do
     end
   end
 
+  after do
+    LinkChecker::Net::HTTP::Config.reset
+  end
+
   it_behaves_like 'a link checker'
+
+  context 'with timeout options', vcr: { cassette_name: '200' } do
+    before do
+      LinkChecker::Net::HTTP.configure do |config|
+        config.read_timeout = 5
+        config.open_timeout = 10
+      end
+      expect_any_instance_of(Net::HTTP).to receive(:read_timeout=).with(5)
+      expect_any_instance_of(Net::HTTP).to receive(:open_timeout=).with(10)
+    end
+
+    include_context 'with url'
+
+    it 'creates requests with a default timeout' do
+      expect(result.success?).to be true
+    end
+  end
 
   context 'timeout' do
     before do

@@ -117,6 +117,15 @@ checker.results.each_pair do |bucket, results|
 end
 ```
 
+You can pass `Typhoeus` timeout options into a new instance of a checker, or configure timeouts globally.
+
+```ruby
+LinkChecker::Typhoeus::Hydra.configure do |config|
+  config.timeout = 5
+  config.connecttimeout = 10
+end
+```
+
 #### [LinkChecker::Net::HTTP](lib/ruby-link-checker/net/http/checker.rb)
 
 Slow, sequential checker.
@@ -139,6 +148,15 @@ end
 # examine results
 checker.results.each_pair do |bucket, results|
   puts "#{bucket}: #{results.size}"
+end
+```
+
+You can pass `Net::HTTP` timeout options into a new instance of a checker, or configure timeouts globally.
+
+```ruby
+LinkChecker::Net::HTTP.configure do |config|
+  config.read_timeout = 5
+  config.open_timeout = 10
 end
 ```
 

@@ -1,6 +1,6 @@
 module LinkChecker
   module Net
-    class HTTP
+    module HTTP
       class Result < ::LinkChecker::Result
         attr_accessor :request, :response
 

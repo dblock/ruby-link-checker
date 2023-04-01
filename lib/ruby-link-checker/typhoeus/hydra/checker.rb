@@ -7,6 +7,8 @@ module LinkChecker
             uri, {
               method: method,
               followlocation: false,
+              timeout: checker.timeout,
+              connecttimeout: checker.connecttimeout,
               headers: {
                 'User-Agent' => checker.user_agent
               }
@@ -26,9 +28,15 @@ module LinkChecker
       end
 
       class Checker < LinkChecker::Checker
+        extend ::LinkChecker::Typhoeus::Hydra::Config
+        attr_accessor(*LinkChecker::Typhoeus::Hydra::Config::ATTRIBUTES)
+
         def initialize(options = {})
-          super options
+          LinkChecker::Typhoeus::Hydra::Config::ATTRIBUTES.each do |key|
+            send("#{key}=", options[key] || LinkChecker::Typhoeus::Hydra::Config.send(key))
+          end
           @hydra = ::Typhoeus::Hydra.new(options[:hydra] || { max_concurrency: 10 })
+          super options
         end
 
         def run
