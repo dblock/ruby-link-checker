@@ -10,4 +10,22 @@ describe LinkChecker::Net::HTTP::Checker do
   end
 
   it_behaves_like 'a link checker'
+
+  context 'timeout' do
+    before do
+      stub_request(:get, 'https://www.example.org/').to_timeout
+    end
+
+    include_context 'with url'
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    it 'times out' do
+      expect(result.success?).to be false
+      expect(result.error?).to be true
+      expect(result.to_s).to eq 'GET https://www.example.org: ERROR (Net::OpenTimeout)'
+    end
+  end
 end

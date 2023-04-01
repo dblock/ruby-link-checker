@@ -13,8 +13,13 @@ module LinkChecker
             }
           )
           request.on_complete do |response|
-            logger.debug "#{method} #{uri}: #{response.code}"
-            result! Result.new(uri, method, request, response, options)
+            if response.timed_out?
+              logger.debug "#{method} #{uri}: #{response.return_code}"
+              result! ResultError.new(uri, method, TimeoutError.new)
+            else
+              logger.debug "#{method} #{uri}: #{response.code}"
+              result! Result.new(uri, method, request, response, options)
+            end
           end
           checker._queue(request)
         end

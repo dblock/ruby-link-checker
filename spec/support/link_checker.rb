@@ -1,27 +1,18 @@
 shared_context 'a link checker' do
-  subject do
-    described_class.new(user_agent: 'user/agent')
-  end
+  context 'user-agent' do
+    subject do
+      described_class.new(user_agent: 'user/agent')
+    end
 
-  it 'updates user-agent' do
-    expect(subject.user_agent).to eq 'user/agent'
+    it 'updates user-agent' do
+      expect(subject.user_agent).to eq 'user/agent'
+    end
   end
 
   context 'check' do
     let(:url) { 'https://www.example.org' }
-    let(:result) do
-      @result
-    end
 
-    before do
-      allow(subject).to receive(:called!)
-      subject.on do |event, *data|
-        subject.called! event, *data
-      end
-      subject.on :result do |result|
-        @result = result
-      end
-    end
+    include_context 'with result'
 
     context 'with metadata' do
       before do

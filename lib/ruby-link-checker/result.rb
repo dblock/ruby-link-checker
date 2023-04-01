@@ -65,5 +65,9 @@ module LinkChecker
     def error?
       true
     end
+
+    def code
+      error.class.name
+    end
   end
 end

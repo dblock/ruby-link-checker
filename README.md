@@ -105,7 +105,7 @@ end
 
 # examine failures and errors as they come
 checker.on :error, :failure do |result|
-  puts "FAIL: #{result.uri}: #{result.response.code}"
+  puts "FAIL: #{result}"
 end    
 
 # execute Hydra#run, will block until all requests have completed
@@ -232,10 +232,11 @@ Checkers support the following events.
 
 | Event    | Description                                                    |
 |----------|----------------------------------------------------------------|
-| :result  | A new result, any of sucess, failure, or error.                |
+| :retry   | A request is being retried on failure or error.                |
+| :result  | A new result, any of success, failure, or error.               |
 | :success | A valid URL, usually a 2xx response from the server.           |
 | :failure | A failed URL, usually a 4xx or a 5xx response from the server. |
-| :error   | An error, such as an invalid URL.                              |
+| :error   | An error, such as an invalid URL or a network timeout.         |
 
 ## Contributing
 
