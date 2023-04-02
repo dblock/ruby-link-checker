@@ -79,7 +79,6 @@ module LinkChecker
       if result.redirect?
         redirect! result
         redirected_to_uri = URI.join(uri, result.redirect_to)
-        puts "#{uri} + #{result.redirect_to} => #{redirected_to_uri}"
         if redirects.include?(redirected_to_uri)
           raise LinkChecker::Errors::RedirectLoopError,
                 redirects.push(redirected_to_uri)
