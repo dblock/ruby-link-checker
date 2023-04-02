@@ -4,10 +4,10 @@ module LinkChecker
       class Result < ::LinkChecker::Result
         attr_accessor :request, :response
 
-        def initialize(uri, method, request, response, options)
+        def initialize(uri, method, original_uri, request, response, options)
           @request = request
           @response = response
-          super uri, method, options
+          super uri, method, original_uri, options
         end
 
         def error?

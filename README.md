@@ -244,8 +244,6 @@ checker.on :error, :failure do |result|
 end
 ```
 
-See [result.rb](lib/ruby-link-checker/result.rb) for available properties.
-
 Checkers support the following events.
 
 | Event    | Description                                                    |
@@ -255,6 +253,20 @@ Checkers support the following events.
 | :success | A valid URL, usually a 2xx response from the server.           |
 | :failure | A failed URL, usually a 4xx or a 5xx response from the server. |
 | :error   | An error, such as an invalid URL or a network timeout.         |
+
+Events are called with results, which contain the following properties.
+
+| Property          | Description                                                     |
+|-------------------|-----------------------------------------------------------------|
+| :url              | The original URL before redirects.                              |
+| :result_url       | The last URL, different from `url` in case of redirects.        |
+| :method           | The result HTTP method.                                         |
+| :code             | HTTP error code.                                                |
+| :request_headers  | Request headers.                                                |
+| :redirect_to      | A redirect URL in case of redirects.                            |
+| :error            | A raised error in case of errors.                               |
+
+See [result.rb](lib/ruby-link-checker/result.rb) for more details.
 
 ## Contributing
 

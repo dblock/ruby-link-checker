@@ -4,15 +4,13 @@ module LinkChecker
       class Task < ::LinkChecker::Task
         def run!
           ::Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
-            p http
-            p checker.read_timeout
             http.read_timeout = checker.read_timeout if checker.read_timeout
             http.open_timeout = checker.open_timeout if checker.open_timeout
             request = ::Net::HTTPGenericRequest.new(method, false, true, uri)
             request['User-Agent'] = checker.user_agent
             response = http.request(request)
             logger.debug "#{method} #{uri}: #{response.code}"
-            result! Result.new(uri, method, request, response, options)
+            result! Result.new(uri, method, original_uri, request, response, options)
           end
         end
       end

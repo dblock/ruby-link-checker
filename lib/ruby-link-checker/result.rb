@@ -1,9 +1,10 @@
 module LinkChecker
   class Result
-    attr_accessor :uri, :method, :options, :checker
+    attr_accessor :uri, :result_uri, :method, :options, :checker
 
-    def initialize(uri, method, options = {})
-      @uri = uri
+    def initialize(current_uri, method, original_uri, options = {})
+      @uri = original_uri
+      @result_uri = current_uri
       @method = method
       @options = options
     end
@@ -50,16 +51,16 @@ module LinkChecker
                  else
                    'ERROR'
                  end
-      "#{method} #{uri}: #{status_s} (#{code})"
+      "#{method} #{uri}#{result_uri == uri ? nil : ' (' + result_uri.to_s + ')'}: #{status_s} (#{code})"
     end
   end
 
   class ResultError < Result
     attr_accessor :error
 
-    def initialize(uri, method, error, options = {})
+    def initialize(uri, method, original_uri, error, options = {})
       @error = error
-      super uri, method, options
+      super uri, method, original_uri, options
     end
 
     def error?

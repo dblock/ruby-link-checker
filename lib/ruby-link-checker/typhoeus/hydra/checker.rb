@@ -17,10 +17,10 @@ module LinkChecker
           request.on_complete do |response|
             if response.timed_out?
               logger.debug "#{method} #{uri}: #{response.return_code}"
-              result! ResultError.new(uri, method, Timeout::Error.new, options)
+              result! ResultError.new(uri, method, original_uri, Timeout::Error.new, options)
             else
               logger.debug "#{method} #{uri}: #{response.code}"
-              result! Result.new(uri, method, request, response, options)
+              result! Result.new(uri, method, original_uri, request, response, options)
             end
           end
           checker._queue(request)

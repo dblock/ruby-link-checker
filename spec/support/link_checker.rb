@@ -180,6 +180,12 @@ shared_context 'a link checker' do
               expect(subject).to have_received(:called!).with(:redirect, anything)
               expect(subject).to have_received(:called!).with(:failure, result).once
             end
+
+            it 'reports its original and result urls' do
+              expect(result.uri.to_s).to eq url
+              expect(result.result_uri.to_s).not_to eq url
+              expect(result.result_uri.to_s).to eq 'https://www.dblock.org/'
+            end
           end
 
           context 'a redirect on HEAD followed by a 200', vcr: { cassette_name: '301+200' } do
