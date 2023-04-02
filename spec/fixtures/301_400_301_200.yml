@@ -1,0 +1,185 @@
+---
+http_interactions:
+- request:
+    method: head
+    uri: https://www.example.org/
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - www.example.org
+  response:
+    status:
+      code: 301
+      message: Moved Permanently
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '162'
+      Server:
+      - Example.org
+      Content-Type:
+      - text/html
+      Location:
+      - https://www.dblock.org/
+      X-Github-Request-Id:
+      - 18E4:5EF8:5BC5E9:75D292:6425C766
+      Accept-Ranges:
+      - bytes
+      Date:
+      - Thu, 30 Mar 2023 17:31:18 GMT
+    body:
+      encoding: UTF-8
+      string: "<html>\r\n<head><title>301 Moved Permanently</title></head>\r\n<body>\r\n<center><h1>301
+        Moved Permanently</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+  recorded_at: Thu, 30 Mar 2023 17:31:18 GMT
+- request:
+    method: head
+    uri: https://www.dblock.org/
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - www.example.org
+  response:
+    status:
+      code: 400
+      message: OK
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2428'
+      Server:
+      - Example.org
+      Content-Type:
+      - text/html; charset=utf-8
+      Last-Modified:
+      - Sat, 09 Jun 2018 03:06:53 GMT
+      Access-Control-Allow-Origin:
+      - "*"
+      Expires:
+      - Thu, 30 Mar 2023 17:41:18 GMT
+      Date:
+      - Thu, 30 Mar 2023 17:31:18 GMT
+      Vary:
+      - Accept-Encoding
+    body:
+      encoding: UTF-8
+      string: "Internal Server Error\n"
+  recorded_at: Thu, 30 Mar 2023 17:31:18 GMT
+- request:
+    method: get
+    uri: https://www.example.org/
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - www.example.org
+  response:
+    status:
+      code: 301
+      message: Moved Permanently
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '162'
+      Server:
+      - Example.org
+      Content-Type:
+      - text/html
+      Location:
+      - https://www.dblock.org/
+      X-Github-Request-Id:
+      - 18E4:5EF8:5BC5E9:75D292:6425C766
+      Accept-Ranges:
+      - bytes
+      Date:
+      - Thu, 30 Mar 2023 17:31:18 GMT
+    body:
+      encoding: UTF-8
+      string: "<html>\r\n<head><title>301 Moved Permanently</title></head>\r\n<body>\r\n<center><h1>301
+        Moved Permanently</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+  recorded_at: Thu, 30 Mar 2023 17:31:18 GMT
+- request:
+    method: get
+    uri: https://www.dblock.org/
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+      Host:
+      - www.example.org
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2428'
+      Server:
+      - Example.org
+      Content-Type:
+      - text/html; charset=utf-8
+      Last-Modified:
+      - Sat, 09 Jun 2018 03:06:53 GMT
+      Access-Control-Allow-Origin:
+      - "*"
+      Expires:
+      - Thu, 30 Mar 2023 17:41:18 GMT
+      Date:
+      - Thu, 30 Mar 2023 17:31:18 GMT
+      Vary:
+      - Accept-Encoding
+    body:
+      encoding: UTF-8
+      string: "<!doctype html>\n<html>\n<head>\n    <title>Example Domain</title>\n\n
+        \   <meta charset=\"utf-8\" />\n    <meta http-equiv=\"Content-type\" content=\"text/html;
+        charset=utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width,
+        initial-scale=1\" />\n    <style type=\"text/css\">\n    body {\n        background-color:
+        #f0f0f2;\n        margin: 0;\n        padding: 0;\n        font-family: -apple-system,
+        system-ui, BlinkMacSystemFont, \"Segoe UI\", \"Open Sans\", \"Helvetica Neue\",
+        Helvetica, Arial, sans-serif;\n        \n    }\n    div {\n        width:
+        600px;\n        margin: 5em auto;\n        padding: 2em;\n        background-color:
+        #fdfdff;\n        border-radius: 0.5em;\n        box-shadow: 2px 3px 7px 2px
+        rgba(0,0,0,0.02);\n    }\n    a:link, a:visited {\n        color: #38488f;\n
+        \       text-decoration: none;\n    }\n    @media (max-width: 700px) {\n        div
+        {\n            margin: 0 auto;\n            width: auto;\n        }\n    }\n
+        \   </style>    \n</head>\n\n<body>\n<div>\n    <h1>Example Domain</h1>\n
+        \   <p>This domain is for use in illustrative examples in documents. You may
+        use this\n    domain in literature without prior coordination or asking for
+        permission.</p>\n    <p><a href=\"https://www.iana.org/domains/example\">More
+        information...</a></p>\n</div>\n</body>\n</html>\n"
+  recorded_at: Thu, 30 Mar 2023 17:31:18 GMT
+recorded_with: VCR 6.1.0

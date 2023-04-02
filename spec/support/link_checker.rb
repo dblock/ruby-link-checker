@@ -297,6 +297,18 @@ shared_context 'a link checker' do
               expect(result.success?).to be true
             end
           end
+
+          context 'a redirect on HEAD followed by a 400 error succeeds on GET',
+                  vcr: { cassette_name: '301+400+301+200' } do
+            it 'calls redirect callback' do
+              expect(result.success?).to be true
+              expect(result.failure?).to be false
+              expect(result.redirect?).to be false
+              expect(subject).to have_received(:called!).with(:redirect, anything).twice
+              expect(subject).to have_received(:called!).with(:success, result).once
+              expect(subject).not_to have_received(:called!).with(:failure, anything)
+            end
+          end
         end
       end
     end

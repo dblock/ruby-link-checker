@@ -28,6 +28,7 @@ module LinkChecker
         _queue_task(uri, method, options)
       elsif methods_left.any?
         @method = methods_left.shift
+        @redirects = [uri]
         @uri = URI(@uri) unless @uri.is_a?(URI)
         _queue_task(uri, method, options)
       elsif @result && result.error?
