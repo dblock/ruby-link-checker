@@ -28,7 +28,6 @@ module LinkChecker
         _queue_task(uri, method, original_uri || uri, options)
       elsif methods_left.any?
         @method = methods_left.shift
-        @redirects = [uri]
         @uri = URI(@uri) unless @uri.is_a?(URI)
         _queue_task(uri, method, original_uri || uri, options)
       elsif @result && result.error?
@@ -72,9 +71,20 @@ module LinkChecker
       _handle_result ResultError.new(uri, method, original_uri, e, options)
     end
 
+    def _retries_left_s
+      return nil unless retry? && retries_left > 0
+
+      if retries_left == 1
+        '1 retry left'
+      else
+        "#{retries_left} retries left"
+      end
+    end
+
     def _handle_result(result)
       @result = result
-      logger.info "#{' ' * (redirects.count - 1)}#{result}"
+      retry_text = " (#{_retries_left_s})" if retry? && (result.error? || result.failure?)
+      logger.info "#{' ' * (redirects.count - 1)}#{result}#{retry_text}"
       result! result
       if result.redirect?
         redirect! result
@@ -89,6 +99,7 @@ module LinkChecker
       elsif result.success?
         success! result
       else
+        @redirects = [uri]
         execute!
       end
     rescue StandardError => e
