@@ -240,6 +240,19 @@ shared_context 'a link checker' do
             end
           end
 
+          context 'a failed retry on a redirect', vcr: { cassette_name: '308+429', allow_playback_repeats: true } do
+            subject do
+              described_class.new(methods: %w[HEAD], retries: 2)
+            end
+
+            it 'calls redirect callback' do
+              expect(result.success?).to be false
+              expect(result.failure?).to be true
+              expect(result.error?).to be false
+              expect(result.error).not_to be_a LinkChecker::Errors::RedirectLoopError
+            end
+          end
+
           context 'an invalid URI' do
             let(:url) { '\/invalid-url' }
 

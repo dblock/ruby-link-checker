@@ -9,7 +9,6 @@ module LinkChecker
             request = ::Net::HTTPGenericRequest.new(method, false, true, uri)
             request['User-Agent'] = checker.user_agent
             response = http.request(request)
-            logger.debug "#{method} #{uri}: #{response.code}"
             result! Result.new(uri, method, original_uri, request, response, options)
           end
         end

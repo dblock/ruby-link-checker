@@ -1,0 +1,108 @@
+---
+http_interactions:
+- request:
+    method: head
+    uri: https://www.example.org/
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Ruby Link Checker/0.2.0
+      Expect:
+      - ''
+  response:
+    status:
+      code: 308
+      message: ''
+    headers:
+      server:
+      - CloudFront
+      date:
+      - Mon, 03 Apr 2023 00:01:15 GMT
+      content-length:
+      - '0'
+      location:
+      - https://www.dblock.org/
+      x-cache:
+      - FunctionGeneratedResponse from cloudfront
+      via:
+      - 1.1 49830f6fdfb2c3519e81248d6d19f450.cloudfront.net (CloudFront)
+      x-amz-cf-pop:
+      - EWR52-C4
+      x-amz-cf-id:
+      - BRpz7eXeEToGF8Ytac3rGh6DHQZLwnZBdNOxnDICSUPoHDN6wHDxWQ==
+    body:
+      encoding: UTF-8
+      string: ''
+    http_version: '2'
+    adapter_metadata:
+      effective_url: https://www.example.org/
+  recorded_at: Mon, 03 Apr 2023 00:01:15 GMT
+- request:
+    method: head
+    uri: https://www.dblock.org/
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Ruby Link Checker/0.2.0
+      Expect:
+      - ''
+  response:
+    status:
+      code: 429
+      message: ''
+    headers:
+      server:
+      - nginx
+      date:
+      - Mon, 03 Apr 2023 00:01:15 GMT
+      content-type:
+      - text/html; charset=utf-8
+      vary:
+      - Accept-Encoding
+      - Accept
+      x-frame-options:
+      - SAMEORIGIN
+      x-xss-protection:
+      - '0'
+      x-content-type-options:
+      - nosniff
+      x-download-options:
+      - noopen
+      x-permitted-cross-domain-policies:
+      - none
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      x-discourse-route:
+      - users/show
+      cache-control:
+      - no-cache, no-store
+      content-security-policy:
+      - upgrade-insecure-requests; base-uri 'self'; object-src 'none'; script-src
+        https://forum.opensearch.org/logs/ https://forum.opensearch.org/sidekiq/ https://forum.opensearch.org/mini-profiler-resources/
+        https://global.discourse-cdn.com/business5/assets/ https://global.discourse-cdn.com/business5/brotli_asset/
+        https://forum.opensearch.org/extra-locales/ https://sea1.discourse-cdn.com/business5/highlight-js/
+        https://sea1.discourse-cdn.com/business5/javascripts/ https://sea1.discourse-cdn.com/business5/plugins/
+        https://sea1.discourse-cdn.com/business5/theme-javascripts/ https://sea1.discourse-cdn.com/business5/svg-sprite/
+        'sha256-Gty3/aPWFfSvz7pdT39HY97/+2opLup9V0L19ZF0IwY=' https://forum.opensearch.org/plugins/discourse-client-performance/javascripts/discourse-client-performance.js;
+        worker-src 'self' https://global.discourse-cdn.com/business5/assets/ https://global.discourse-cdn.com/business5/brotli_asset/
+        https://sea1.discourse-cdn.com/business5/javascripts/ https://sea1.discourse-cdn.com/business5/plugins/;
+        frame-ancestors 'self'; manifest-src 'self'
+      x-request-id:
+      - a54de95c-ab20-4f9a-81a0-93908fc94357
+      cdck-proxy-id:
+      - app-router-tiehunter03.sea1
+      - app-balancer-tieinterceptor1b.sea1
+      strict-transport-security:
+      - max-age=31536000
+    body:
+      encoding: UTF-8
+      string: ''
+    http_version: '2'
+    adapter_metadata:
+      effective_url: https://www.dblock.org/
+  recorded_at: Mon, 03 Apr 2023 00:01:15 GMT
+recorded_with: VCR 6.1.0
