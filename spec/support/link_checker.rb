@@ -1,4 +1,14 @@
 shared_context 'a link checker' do
+  context 'default' do
+    subject do
+      described_class.new
+    end
+
+    it 'has a default user-agent' do
+      expect(subject.user_agent).to eq "Ruby Link Checker/#{LinkChecker::VERSION}"
+    end
+  end
+
   context 'user-agent' do
     subject do
       described_class.new(user_agent: 'user/agent')
