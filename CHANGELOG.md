@@ -1,7 +1,6 @@
-### 0.3.0 (Next)
+### 0.3.0 (2025-07-05)
 
 * [#10](https://github.com/dblock/ruby-link-checker/pull/10): Add a space after `:` to help rendering in GHA - [@dblock](https://github.com/dblock).
-* Your contribution here.
 
 ### 0.2.0 (2023-04-03)
 
