@@ -19,6 +19,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [LinkChecker::Net::HTTP](#linkcheckernethttp)
   - [Options](#options)
     - [Retries](#retries)
+    - [Retry After](#retry-after)
     - [Results](#results)
     - [Methods](#methods)
     - [Logger](#logger)
@@ -168,6 +169,14 @@ By default link checkers do not retry. You can set a number of times to retry al
 
 ```ruby
 checker = LinkChecker::Net::HTTP::Checker.new(retry: 1)
+```
+
+#### Retry After
+
+If retry is enabled, link checkers can wait for a number of seconds before retrying.
+
+```ruby
+checker = LinkChecker::Net::HTTP::Checker.new(retry_after: 1) # wait for 1 second before retrying
 ```
 
 #### Results

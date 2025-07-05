@@ -51,7 +51,7 @@ module LinkChecker
                  else
                    'ERROR'
                  end
-      "#{method} #{uri}#{result_uri == uri ? nil : ' (' + result_uri.to_s + ')'}: #{status_s} (#{code})"
+      "#{method} #{uri}#{result_uri == uri ? nil : ' (' + result_uri.to_s + ')'} : #{status_s} (#{code})"
     end
   end
 
