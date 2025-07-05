@@ -6,10 +6,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Install Ruby (2.7)
+    - name: Install Ruby (3.4)
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 2.7
+        ruby-version: 3.4
     - uses: amancevice/setup-code-climate@v0
       with:
         cc_test_reporter_id: ${{ secrets.CC_TEST_REPORTER_ID }}

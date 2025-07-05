@@ -46,7 +46,7 @@ describe LinkChecker::Net::HTTP::Checker do
     it 'times out' do
       expect(result.success?).to be false
       expect(result.error?).to be true
-      expect(result.to_s).to eq 'GET https://www.example.org: ERROR (Net::OpenTimeout)'
+      expect(result.to_s).to eq 'GET https://www.example.org : ERROR (Net::OpenTimeout)'
     end
 
     context 'with metadata' do
