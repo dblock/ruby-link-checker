@@ -3,8 +3,6 @@ Fast Ruby Link Checker
 
 [![Gem Version](http://img.shields.io/gem/v/ruby-link-checker.svg)](http://badge.fury.io/rb/ruby-link-checker)
 [![Build Status](https://github.com/dblock/ruby-link-checker/workflows/test/badge.svg?branch=main)](https://github.com/dblock/ruby-link-checker/actions)
-[![Code Climate](https://codeclimate.com/github/dblock/ruby-link-checker.svg)](https://codeclimate.com/github/dblock/ruby-link-checker)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/164f1e23fc706b6efa63/test_coverage)](https://codeclimate.com/github/dblock/ruby-link-checker/test_coverage)
 
 A fast Ruby link checker with support for multiple HTTP libraries. Does not parse documents, just checks links. Fast. Anecdotal benchmarking on a M1 mac and T1 Internet yields ~50 URLs per second with `LinkChecker::Typhoeus::Hydra`.
 
