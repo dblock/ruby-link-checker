@@ -27,6 +27,7 @@ module LinkChecker
 
       class Checker < LinkChecker::Checker
         extend ::LinkChecker::Typhoeus::Hydra::Config
+
         attr_accessor(*LinkChecker::Typhoeus::Hydra::Config::ATTRIBUTES)
 
         def initialize(options = {})
