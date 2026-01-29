@@ -16,6 +16,9 @@ Style/HashTransformValues:
 Metrics:
   Enabled: false
 
+Layout/EndOfLine:
+  EnforcedStyle: lf
+
 plugins:
   - rubocop-rake
   - rubocop-rspec
