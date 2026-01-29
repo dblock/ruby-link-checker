@@ -1,0 +1,24 @@
+---
+name: coverage
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4
+          bundler-cache: true
+      - name: Run tests with coverage
+        run: bundle exec rake spec
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/.resultset.json
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
