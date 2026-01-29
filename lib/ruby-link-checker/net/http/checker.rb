@@ -16,6 +16,7 @@ module LinkChecker
 
       class Checker < LinkChecker::Checker
         extend ::LinkChecker::Net::HTTP::Config
+
         attr_accessor(*LinkChecker::Net::HTTP::Config::ATTRIBUTES)
 
         def initialize(options = {})
