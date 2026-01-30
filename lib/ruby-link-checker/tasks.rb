@@ -103,8 +103,10 @@ module LinkChecker
         execute!
       end
     rescue StandardError => e
-      logger.error("#{self}##{__method__}") { e }
-      _handle_result ResultError.new(result.uri, result.method, result.result_uri, e, options)
+      logger.error("#{self}##{__method__}") { e } rescue nil
+      error_result = ResultError.new(result.uri, result.method, result.result_uri, e, options)
+      result! error_result
+      error! error_result
     end
   end
 end
