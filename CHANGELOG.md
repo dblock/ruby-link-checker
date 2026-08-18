@@ -1,5 +1,6 @@
 ### 0.3.1 (Next)
 
+* [#13](https://github.com/dblock/ruby-link-checker/pull/13): Fix `SystemStackError` caused by infinite recursion in `_handle_result` - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#14](https://github.com/dblock/ruby-link-checker/pull/14): Migrate Danger to use danger-pr-comment workflow - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#14](https://github.com/dblock/ruby-link-checker/pull/14): Removed Code Climate - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#15](https://github.com/dblock/ruby-link-checker/pull/15): Added Codecov - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
