@@ -8,6 +8,7 @@
 * [#19](https://github.com/dblock/ruby-link-checker/pull/19): Added `LinkChecker::Async::HTTP`, a link checker based on [async-http](https://github.com/socketry/async-http) - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#19](https://github.com/dblock/ruby-link-checker/pull/19): Dropped support for Ruby < 3.3 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#20](https://github.com/dblock/ruby-link-checker/pull/20): Added support for custom headers - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
+* [#21](https://github.com/dblock/ruby-link-checker/pull/21): Improved test coverage to 100% and fixed Danger dry_run failure by unpinning `danger-changelog` - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * Your contribution here.
 
 ### 0.3.0 (2025-07-05)
