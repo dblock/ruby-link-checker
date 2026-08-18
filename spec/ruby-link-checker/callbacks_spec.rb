@@ -6,6 +6,10 @@ describe LinkChecker::Callbacks do
   subject do
     Class.new do
       include LinkChecker::Callbacks
+
+      def logger
+        @logger ||= Logger.new(nil)
+      end
     end.new
   end
 
@@ -38,6 +42,35 @@ describe LinkChecker::Callbacks do
       subject.send(:callback, :bar, :bar)
       expect(subject).to have_received(:called!).with(:foo).twice
       expect(subject).to have_received(:called!).with(:bar)
+    end
+  end
+
+  context 'method_missing' do
+    it 'invokes callback for a bang method' do
+      allow(subject).to receive(:called!)
+      subject.on :foo do |data|
+        subject.called! data
+      end
+      subject.foo! :foo
+      expect(subject).to have_received(:called!).with(:foo)
+    end
+
+    it 'raises NoMethodError for a non-bang method' do
+      expect { subject.foo }.to raise_error NoMethodError
+    end
+  end
+
+  context 'when a callback raises an error' do
+    before do
+      subject.on :foo do
+        raise StandardError, 'oops'
+      end
+    end
+
+    it 'rescues and logs the error' do
+      allow(subject.logger).to receive(:error)
+      expect(subject.send(:callback, :foo)).to be false
+      expect(subject.logger).to have_received(:error)
     end
   end
 end

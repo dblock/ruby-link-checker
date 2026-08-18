@@ -15,6 +15,12 @@ describe LinkChecker::Net::HTTP::Checker do
 
   it_behaves_like 'a link checker'
 
+  describe '.config' do
+    it 'returns the Config module' do
+      expect(LinkChecker::Net::HTTP.config).to eq LinkChecker::Net::HTTP::Config
+    end
+  end
+
   context 'with timeout options', vcr: { cassette_name: '200' } do
     before do
       LinkChecker::Net::HTTP.configure do |config|
@@ -55,6 +61,17 @@ describe LinkChecker::Net::HTTP::Checker do
       it 'times out' do
         expect(result.error?).to be true
         expect(result.options).to eq(foo: :bar)
+      end
+    end
+  end
+
+  describe LinkChecker::Net::HTTP::Result do
+    describe '#code' do
+      it 'returns -1 when the response raises' do
+        response = instance_double(Net::HTTPResponse)
+        allow(response).to receive(:code).and_raise(StandardError)
+        result = described_class.new(URI('https://www.example.org'), 'GET', nil, nil, response, {})
+        expect(result.code).to eq(-1)
       end
     end
   end

@@ -33,4 +33,15 @@ describe LinkChecker::Tasks do
       end
     end
   end
+
+  describe '#retries' do
+    let(:checker) { LinkChecker::Net::HTTP::Checker.new(methods: ['GET'], retries: 2) }
+    let(:task_klass) { LinkChecker::Net::HTTP::Task }
+    let(:url) { 'https://www.example.org' }
+
+    it 'delegates to the checker' do
+      tasks = described_class.new(checker, task_klass, url, ['GET'])
+      expect(tasks.send(:retries)).to eq 2
+    end
+  end
 end

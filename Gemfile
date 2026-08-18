@@ -8,7 +8,7 @@ gem 'rake'
 
 group :development, :test do
   gem 'danger'
-  gem 'danger-changelog', '0.6.1'
+  gem 'danger-changelog', '0.8.0'
   gem 'danger-pr-comment'
   gem 'danger-toc', '0.2.0'
   gem 'rspec', '~> 3.0'

@@ -35,6 +35,12 @@ describe LinkChecker::Async::HTTP::Checker do
   describe AsyncTestLinkChecker::LinkChecker do
     it_behaves_like 'a link checker'
 
+    describe '.config' do
+      it 'returns the Config module' do
+        expect(LinkChecker::Async::HTTP.config).to eq LinkChecker::Async::HTTP::Config
+      end
+    end
+
     context 'with timeout options', vcr: { cassette_name: '200' } do
       before do
         LinkChecker::Async::HTTP.configure do |config|
@@ -77,6 +83,16 @@ describe LinkChecker::Async::HTTP::Checker do
           expect(result.error?).to be true
           expect(result.options).to eq(foo: :bar)
         end
+      end
+    end
+  end
+
+  describe LinkChecker::Async::HTTP::Result do
+    describe '#code' do
+      it 'returns -1 when there is no response' do
+        request = instance_double(Protocol::HTTP::Request)
+        result = described_class.new(URI('https://www.example.org'), 'GET', nil, request, nil, {})
+        expect(result.code).to eq(-1)
       end
     end
   end
