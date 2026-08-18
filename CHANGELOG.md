@@ -4,6 +4,7 @@
 * [#14](https://github.com/dblock/ruby-link-checker/pull/14): Migrate Danger to use danger-pr-comment workflow - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#14](https://github.com/dblock/ruby-link-checker/pull/14): Removed Code Climate - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#15](https://github.com/dblock/ruby-link-checker/pull/15): Added Codecov - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
+* [#18](https://github.com/dblock/ruby-link-checker/pull/18): Added Ruby 4.0 to the CI test matrix - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * Your contribution here.
 
 ### 0.3.0 (2025-07-05)

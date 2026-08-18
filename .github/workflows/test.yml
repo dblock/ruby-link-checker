@@ -14,11 +14,12 @@ jobs:
           - { ruby: '3.2' }
           - { ruby: '3.3' }
           - { ruby: '3.4' }
+          - { ruby: '4.0' }
     name: test (${{ matrix.entry.ruby }})
     steps:
       - uses: actions/checkout@v3
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.entry.ruby }}
-      - run: bundle install --jobs=3 --retry=3 --path=vendor/bundle
+      - run: bundle install --jobs=3 --retry=3
       - run: bundle exec rake spec
