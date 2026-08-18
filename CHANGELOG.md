@@ -1,4 +1,4 @@
-### 0.4.1 (Next)
+### 0.5.0 (Next)
 
 * [#8](https://github.com/dblock/ruby-link-checker/issues/8): Added `protocol` configuration option to `LinkChecker::Async::HTTP` to force HTTP/1 or HTTP/2 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * Your contribution here.
