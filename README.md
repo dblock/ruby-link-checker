@@ -172,6 +172,14 @@ LinkChecker::Async::HTTP.configure do |config|
 end
 ```
 
+You can also force a specific HTTP protocol version, `:http1` or `:http2`, per instance or globally. By default, `async-http` negotiates the protocol version with the server.
+
+```ruby
+LinkChecker::Async::HTTP.configure do |config|
+  config.protocol = :http2
+end
+```
+
 #### [LinkChecker::Net::HTTP](lib/ruby-link-checker/net/http/checker.rb)
 
 Slow, sequential checker.

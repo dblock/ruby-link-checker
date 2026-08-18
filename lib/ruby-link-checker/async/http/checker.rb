@@ -69,12 +69,27 @@ module LinkChecker
         def _client_for(uri)
           key = [uri.scheme, uri.host, uri.port]
           @clients[key] ||= begin
-            endpoint = ::Async::HTTP::Endpoint.parse(uri.to_s, timeout: open_timeout)
+            endpoint = ::Async::HTTP::Endpoint.parse(uri.to_s, timeout: open_timeout, **_endpoint_options)
             ::Async::HTTP::Client.new(endpoint)
           end
         end
 
         private
+
+        # Maps the configured protocol (:http1 or :http2) to the
+        # corresponding async-http protocol implementation.
+        def _endpoint_options
+          case protocol
+          when :http1
+            { protocol: ::Async::HTTP::Protocol::HTTP1 }
+          when :http2
+            { protocol: ::Async::HTTP::Protocol::HTTP2 }
+          when nil
+            {}
+          else
+            raise ArgumentError, "Unsupported protocol: #{protocol.inspect}, expected :http1 or :http2"
+          end
+        end
 
         def _flush!
           queue = @queue

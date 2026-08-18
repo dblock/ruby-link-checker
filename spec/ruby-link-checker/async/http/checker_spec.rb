@@ -60,6 +60,53 @@ describe LinkChecker::Async::HTTP::Checker do
       end
     end
 
+    context 'with a protocol option', vcr: { cassette_name: '200' } do
+      before do
+        LinkChecker::Async::HTTP.configure do |config|
+          config.protocol = protocol
+        end
+        expect(Async::HTTP::Endpoint).to receive(:parse).with(
+          URI(url).to_s,
+          hash_including(protocol: expected_protocol)
+        ).and_call_original
+      end
+
+      include_context 'with url'
+
+      context 'http1' do
+        let(:protocol) { :http1 }
+        let(:expected_protocol) { Async::HTTP::Protocol::HTTP1 }
+
+        it 'creates requests using HTTP/1' do
+          expect(result.success?).to be true
+        end
+      end
+
+      context 'http2' do
+        let(:protocol) { :http2 }
+        let(:expected_protocol) { Async::HTTP::Protocol::HTTP2 }
+
+        it 'creates requests using HTTP/2' do
+          expect(result.success?).to be true
+        end
+      end
+    end
+
+    context 'with an unsupported protocol option' do
+      before do
+        LinkChecker::Async::HTTP.configure do |config|
+          config.protocol = :http3
+        end
+      end
+
+      include_context 'with url'
+
+      it 'raises an ArgumentError' do
+        expect(result.error?).to be true
+        expect(result.error.message).to eq('Unsupported protocol: :http3, expected :http1 or :http2')
+      end
+    end
+
     context 'timeout' do
       before do
         stub_request(:get, 'https://www.example.org/').to_timeout

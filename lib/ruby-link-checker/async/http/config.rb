@@ -9,6 +9,7 @@ module LinkChecker
         ATTRIBUTES = %i[
           read_timeout
           open_timeout
+          protocol
         ].freeze
 
         attr_accessor(*Config::ATTRIBUTES)
@@ -16,6 +17,7 @@ module LinkChecker
         def reset
           self.read_timeout = nil
           self.open_timeout = nil
+          self.protocol = nil
         end
       end
 
