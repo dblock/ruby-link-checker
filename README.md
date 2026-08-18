@@ -15,6 +15,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
   - [Passing Options](#passing-options)
   - [Checkers](#checkers)
     - [LinkChecker::Typhoeus::Hydra](#linkcheckertyphoeushydra)
+    - [LinkChecker::Async::HTTP](#linkcheckerasynchttp)
     - [LinkChecker::Net::HTTP](#linkcheckernethttp)
   - [Options](#options)
     - [Retries](#retries)
@@ -25,6 +26,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [User-Agent](#user-agent)
   - [Global Configuration](#global-configuration)
   - [Callbacks and Events](#callbacks-and-events)
+- [Benchmarks](#benchmarks)
 - [Contributing](#contributing)
 - [Copyright and License](#copyright-and-license)
 
@@ -123,6 +125,49 @@ You can pass `Typhoeus` timeout options into a new instance of a checker, or con
 LinkChecker::Typhoeus::Hydra.configure do |config|
   config.timeout = 5
   config.connecttimeout = 10
+end
+```
+
+#### [LinkChecker::Async::HTTP](lib/ruby-link-checker/async/http/checker.rb)
+
+Fast, concurrent link checker that uses [async-http](https://github.com/socketry/async-http).
+
+```ruby
+require 'async'
+require 'async/http'
+require 'ruby-link-checker'
+
+# create a new instance of a checker
+checker = LinkChecker::Async::HTTP::Checker.new
+
+# log requests and response codes
+checker.logger.level = Logger::INFO
+
+links = [...] # array of URLs
+links.each do |url|
+  checker.check url
+end
+
+# examine failures and errors as they come
+checker.on :error, :failure do |result|
+  puts "FAIL: #{result}"
+end
+
+# runs all queued checks concurrently, will block until all requests have completed
+checker.run
+
+# examine results
+checker.results.each_pair do |bucket, results|
+  puts "#{bucket}: #{results.size}"
+end
+```
+
+You can pass `Async::HTTP` timeout options into a new instance of a checker, or configure timeouts globally.
+
+```ruby
+LinkChecker::Async::HTTP.configure do |config|
+  config.read_timeout = 5
+  config.open_timeout = 10
 end
 ```
 
@@ -275,6 +320,16 @@ Events are called with results, which contain the following properties.
 | :error            | A raised error in case of errors.                               |
 
 See [result.rb](lib/ruby-link-checker/result.rb) for more details.
+
+## Benchmarks
+
+See [benchmarks/check.rb](benchmarks/check.rb) for a script comparing the performance of the three checkers (`LinkChecker::Net::HTTP`, `LinkChecker::Typhoeus::Hydra`, and `LinkChecker::Async::HTTP`) against a fixed set of URLs.
+
+```
+bundle exec ruby -Ilib benchmarks/check.rb
+```
+
+Anecdotal results show `LinkChecker::Async::HTTP` using significantly less CPU time than `LinkChecker::Typhoeus::Hydra` (both concurrent checkers), while wall-clock time is comparable between the two and depends on timeouts and the responsiveness of the URLs being checked. `LinkChecker::Net::HTTP` checks links sequentially and is significantly slower in wall-clock time for large batches of URLs; it's commented out by default in the script.
 
 ## Contributing
 

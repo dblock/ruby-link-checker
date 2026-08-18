@@ -1,0 +1,83 @@
+# frozen_string_literal: true
+
+require 'spec_helper'
+require 'async'
+require 'async/http'
+
+describe LinkChecker::Async::HTTP::Checker do
+  module AsyncTestLinkChecker
+    class Task < LinkChecker::Async::HTTP::Task; end
+
+    class LinkChecker < LinkChecker::Async::HTTP::Checker
+      def check(url, options = {})
+        super
+        run
+      end
+    end
+  end
+
+  before :all do
+    VCR.configure do |config|
+      config.hook_into :webmock
+      # async-http's WebMock adapter replays responses through a real HTTP/1
+      # parser, which rejects a Transfer-Encoding header alongside a
+      # Content-Length or an empty body, unlike the other checkers' adapters.
+      config.before_playback do |interaction|
+        interaction.response.headers.delete('Transfer-Encoding')
+      end
+    end
+  end
+
+  after do
+    LinkChecker::Async::HTTP::Config.reset
+  end
+
+  describe AsyncTestLinkChecker::LinkChecker do
+    it_behaves_like 'a link checker'
+
+    context 'with timeout options', vcr: { cassette_name: '200' } do
+      before do
+        LinkChecker::Async::HTTP.configure do |config|
+          config.read_timeout = 5
+          config.open_timeout = 10
+        end
+        expect(Async::HTTP::Endpoint).to receive(:parse).with(
+          URI(url).to_s,
+          hash_including(timeout: 10)
+        ).and_call_original
+      end
+
+      include_context 'with url'
+
+      it 'creates requests with a default timeout' do
+        expect(result.success?).to be true
+      end
+    end
+
+    context 'timeout' do
+      before do
+        stub_request(:get, 'https://www.example.org/').to_timeout
+      end
+
+      include_context 'with url'
+
+      around do |example|
+        VCR.turned_off { example.run }
+      end
+
+      it 'times out' do
+        expect(result.success?).to be false
+        expect(result.error?).to be true
+      end
+
+      context 'with metadata' do
+        let(:options) { { foo: :bar } }
+
+        it 'times out' do
+          expect(result.error?).to be true
+          expect(result.options).to eq(foo: :bar)
+        end
+      end
+    end
+  end
+end

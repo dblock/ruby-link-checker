@@ -1,10 +1,12 @@
-### 0.3.1 (Next)
+### 0.4.0 (Next)
 
 * [#13](https://github.com/dblock/ruby-link-checker/pull/13): Fix `SystemStackError` caused by infinite recursion in `_handle_result` - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#14](https://github.com/dblock/ruby-link-checker/pull/14): Migrate Danger to use danger-pr-comment workflow - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#14](https://github.com/dblock/ruby-link-checker/pull/14): Removed Code Climate - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#15](https://github.com/dblock/ruby-link-checker/pull/15): Added Codecov - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#18](https://github.com/dblock/ruby-link-checker/pull/18): Added Ruby 4.0 to the CI test matrix - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
+* [#19](https://github.com/dblock/ruby-link-checker/pull/19): Added `LinkChecker::Async::HTTP`, a link checker based on [async-http](https://github.com/socketry/async-http) - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
+* [#19](https://github.com/dblock/ruby-link-checker/pull/19): Dropped support for Ruby < 3.3 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * Your contribution here.
 
 ### 0.3.0 (2025-07-05)
