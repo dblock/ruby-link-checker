@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 describe LinkChecker::Typhoeus::Hydra::Checker do
-  module TestLinkChecker
+  module TyphoeusTestLinkChecker
     class Task < LinkChecker::Typhoeus::Hydra::Task; end
 
     class LinkChecker < LinkChecker::Typhoeus::Hydra::Checker
@@ -19,7 +19,7 @@ describe LinkChecker::Typhoeus::Hydra::Checker do
     end
   end
 
-  describe TestLinkChecker::LinkChecker do
+  describe TyphoeusTestLinkChecker::LinkChecker do
     it_behaves_like 'a link checker'
 
     context 'with timeout options', vcr: { cassette_name: '200' } do

@@ -20,9 +20,9 @@ module LinkChecker
       end
     end
 
-    def method_missing(m, *args, &block)
+    def method_missing(m, *, &)
       if m.to_s[-1] == '!'
-        callback(m.to_s[...-1].to_sym, *args)
+        callback(m.to_s[...-1].to_sym, *)
       else
         super
       end
