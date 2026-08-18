@@ -7,6 +7,10 @@ shared_context 'a link checker' do
     it 'has a default user-agent' do
       expect(subject.user_agent).to eq "Ruby Link Checker/#{LinkChecker::VERSION}"
     end
+
+    it 'has no default headers' do
+      expect(subject.headers).to eq({})
+    end
   end
 
   context 'user-agent' do
@@ -16,6 +20,16 @@ shared_context 'a link checker' do
 
     it 'updates user-agent' do
       expect(subject.user_agent).to eq 'user/agent'
+    end
+  end
+
+  context 'headers' do
+    subject do
+      described_class.new(headers: { 'DNT' => '1' })
+    end
+
+    it 'updates headers' do
+      expect(subject.headers).to eq('DNT' => '1')
     end
   end
 
@@ -102,6 +116,16 @@ shared_context 'a link checker' do
 
             it 'returns all metadata' do
               expect(result.options).to eq({})
+            end
+
+            context 'with custom headers' do
+              subject do
+                described_class.new(methods: ['GET'], headers: { 'DNT' => '1' })
+              end
+
+              it 'sends custom headers' do
+                expect(result.request_headers['DNT']).to eq '1'
+              end
             end
 
             it 'returns results' do

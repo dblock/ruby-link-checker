@@ -9,7 +9,8 @@ module LinkChecker
         end
 
         def [](key)
-          @headers[key.to_s.downcase]
+          value = @headers[key.to_s.downcase]
+          value.is_a?(Array) ? value.join(', ') : value
         end
       end
 

@@ -8,6 +8,7 @@ module LinkChecker
             http.open_timeout = checker.open_timeout if checker.open_timeout
             request = ::Net::HTTPGenericRequest.new(method, false, true, uri)
             request['User-Agent'] = checker.user_agent
+            checker.headers.each { |key, value| request[key] = value }
             response = http.request(request)
             result! Result.new(uri, method, original_uri, request, response, options)
           end
