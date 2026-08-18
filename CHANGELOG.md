@@ -1,3 +1,7 @@
+### 0.4.1 (Next)
+
+* Your contribution here.
+
 ### 0.4.0 (2026/8/17)
 
 * [#13](https://github.com/dblock/ruby-link-checker/pull/13): Fix `SystemStackError` caused by infinite recursion in `_handle_result` - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
