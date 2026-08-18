@@ -7,6 +7,7 @@
 * [#18](https://github.com/dblock/ruby-link-checker/pull/18): Added Ruby 4.0 to the CI test matrix - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#19](https://github.com/dblock/ruby-link-checker/pull/19): Added `LinkChecker::Async::HTTP`, a link checker based on [async-http](https://github.com/socketry/async-http) - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#19](https://github.com/dblock/ruby-link-checker/pull/19): Dropped support for Ruby < 3.3 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
+* [#20](https://github.com/dblock/ruby-link-checker/pull/20): Added support for custom headers - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * Your contribution here.
 
 ### 0.3.0 (2025-07-05)

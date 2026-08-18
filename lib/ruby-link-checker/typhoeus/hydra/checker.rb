@@ -11,7 +11,7 @@ module LinkChecker
               connecttimeout: checker.connecttimeout,
               headers: {
                 'User-Agent' => checker.user_agent
-              }
+              }.merge(checker.headers)
             }
           )
           request.on_complete do |response|

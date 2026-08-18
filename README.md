@@ -24,6 +24,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [Methods](#methods)
     - [Logger](#logger)
     - [User-Agent](#user-agent)
+    - [Headers](#headers)
   - [Global Configuration](#global-configuration)
   - [Callbacks and Events](#callbacks-and-events)
 - [Benchmarks](#benchmarks)
@@ -271,6 +272,20 @@ Pass your own user-agent. Default is `Ruby Link Checker/x.y.z`.
 checker = LinkChecker::Net::HTTP::Checker.new(user_agent: 'Custom Agent/1.0')
 ```
 
+#### Headers
+
+Some sites reject or return errors (403, 404) to requests that look like bots. Pass additional headers to mimic a browser.
+
+```ruby
+checker = LinkChecker::Net::HTTP::Checker.new(
+  headers: {
+    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language' => 'en-US,en;q=0.5',
+    'DNT' => '1'
+  }
+)
+```
+
 ### Global Configuration
 
 All options can also be configured globally.
@@ -278,6 +293,7 @@ All options can also be configured globally.
 ```ruby
 LinkChecker.configure do |config|
   config.user_agent = 'Custom Agent/1.0'
+  config.headers = { 'DNT' => '1' }
   config.methods = ['HEAD', 'GET']
   config.logger = ::Logger.new(STDOUT)
 end

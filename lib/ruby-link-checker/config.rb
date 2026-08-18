@@ -7,6 +7,7 @@ module LinkChecker
     ATTRIBUTES = %i[
       methods
       user_agent
+      headers
       logger
       retries
     ].freeze
@@ -16,6 +17,7 @@ module LinkChecker
     def reset
       self.methods = %w[HEAD GET]
       self.user_agent = "Ruby Link Checker/#{LinkChecker::VERSION}"
+      self.headers = {}
       self.logger = nil
       self.retries = 0
     end
