@@ -58,6 +58,10 @@ module LinkChecker
           Headers.new(request.headers)
         end
 
+        def response_headers
+          response&.headers || {}
+        end
+
         def redirect_to
           return nil unless response
 

@@ -3,6 +3,7 @@ module LinkChecker
     module HTTP
       class Task < ::LinkChecker::Task
         def run!
+          sleep(delay) if delay.positive?
           ::Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
             http.read_timeout = checker.read_timeout if checker.read_timeout
             http.open_timeout = checker.open_timeout if checker.open_timeout

@@ -50,6 +50,93 @@ shared_context 'a link checker' do
     end
   end
 
+  context 'with transient retries' do
+    let(:checker_options) { {} }
+    let(:checker) { described_class.new({ methods: ['GET'], retries: 2 }.merge(checker_options)) }
+    let(:url) { 'https://www.example.org/retry' }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    it 'retries service errors and preserves metadata' do
+      stub_request(:get, url).to_return({ status: 503 }, { status: 200 })
+      checker.check(url, location: 'page.html')
+      checker.run if checker.respond_to?(:run)
+      expect(checker.results[:success].first.options).to eq(location: 'page.html')
+      expect(a_request(:get, url)).to have_been_made.twice
+    end
+
+    it 'does not retry permanent HTTP failures' do
+      stub_request(:get, url).to_return(status: 404)
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      expect(checker.results[:failure].first.code).to eq(404)
+      expect(a_request(:get, url)).to have_been_made.once
+    end
+
+    it 'retries timeouts and reports a timeout category' do
+      stub_request(:get, url).to_timeout
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      expect(checker.results[:error].first.error_type).to eq(:timeout)
+      expect(a_request(:get, url)).to have_been_made.times(3)
+    end
+
+    it 'does not retry malformed URLs' do
+      checker.check('\/invalid-url')
+      checker.run if checker.respond_to?(:run)
+      expect(checker.results[:error].first.error_type).to eq(:other)
+      expect(checker.results[:error].size).to eq(1)
+    end
+
+    context 'with a configured delay and backoff' do
+      let(:checker_options) { { retry_after: 0.005, retry_backoff: 2 } }
+
+      it 'waits before each retry without changing the retry budget' do
+        stub_request(:get, url).to_return({ status: 503 }, { status: 503 }, { status: 200 })
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        checker.check(url)
+        checker.run if checker.respond_to?(:run)
+        elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+        expect(elapsed).to be >= 0.015
+        expect(a_request(:get, url)).to have_been_made.times(3)
+        expect(checker.results[:success].size).to eq(1)
+      end
+    end
+
+    context 'with Retry-After enabled' do
+      let(:checker_options) { { respect_retry_after: true, max_retry_delay: 0.005 } }
+
+      it 'honors a bounded server delay' do
+        stub_request(:get, url).to_return({ status: 429, headers: { 'Retry-After' => '5' } }, { status: 200 })
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        checker.check(url)
+        checker.run if checker.respond_to?(:run)
+        elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+        expect(elapsed).to be >= 0.005
+        expect(elapsed).to be < 1
+        expect(checker.results[:success].size).to eq(1)
+      end
+
+      it 'accepts HTTP dates' do
+        stub_request(:get, url).to_return(
+          { status: 503, headers: { 'Retry-After' => (Time.now + 60).httpdate } }, { status: 200 }
+        )
+        checker.check(url)
+        checker.run if checker.respond_to?(:run)
+        expect(checker.results[:success].size).to eq(1)
+      end
+
+      it 'ignores invalid server delays' do
+        stub_request(:get, url).to_return({ status: 503, headers: { 'Retry-After' => 'invalid' } }, { status: 200 })
+        checker.check(url)
+        checker.run if checker.respond_to?(:run)
+        expect(checker.results[:success].size).to eq(1)
+      end
+    end
+  end
+
   context 'default' do
     subject do
       described_class.new
@@ -227,7 +314,7 @@ shared_context 'a link checker' do
 
             context 'with 1 retry' do
               subject do
-                described_class.new(methods: ['GET'], retries: 1)
+                described_class.new(methods: ['GET'], retries: 1, retry_status_codes: nil)
               end
 
               it 'fails' do
@@ -243,7 +330,7 @@ shared_context 'a link checker' do
 
             context 'with 2 retries' do
               subject do
-                described_class.new(methods: ['GET'], retries: 2)
+                described_class.new(methods: ['GET'], retries: 2, retry_status_codes: nil)
               end
 
               it 'fails' do

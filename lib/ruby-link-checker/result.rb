@@ -1,3 +1,6 @@
+require 'timeout'
+require 'socket'
+
 module LinkChecker
   class Result
     attr_accessor :uri, :result_uri, :method, :options, :checker
@@ -31,6 +34,14 @@ module LinkChecker
 
     def request_headers
       {}
+    end
+
+    def response_headers
+      {}
+    end
+
+    def error_type
+      nil
     end
 
     def code
@@ -69,6 +80,15 @@ module LinkChecker
 
     def code
       error.class.name
+    end
+
+    def error_type
+      return :timeout if error.is_a?(Timeout::Error)
+      return :timeout if defined?(::Async::TimeoutError) && error.is_a?(::Async::TimeoutError)
+      return error.error_type if error.is_a?(LinkChecker::Errors::ConnectionError)
+      return :connection if [IOError, SystemCallError, SocketError].any? { |klass| error.is_a?(klass) }
+
+      :other
     end
   end
 end

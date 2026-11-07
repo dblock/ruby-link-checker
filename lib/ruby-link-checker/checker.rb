@@ -6,11 +6,10 @@ module LinkChecker
     include LinkChecker::Callbacks
 
     attr_reader :results
-    attr_accessor(*(Config::ATTRIBUTES - %i[max_redirects]))
 
     def initialize(options = {})
       LinkChecker::Config::ATTRIBUTES.each do |key|
-        send("#{key}=", options[key] || LinkChecker.config.send(key))
+        send("#{key}=", options.fetch(key) { LinkChecker.config.send(key) })
       end
       raise ArgumentError, "Missing methods." if methods&.none?
       @logger ||= options[:logger] || LinkChecker::Config.logger || LinkChecker::Logger.default

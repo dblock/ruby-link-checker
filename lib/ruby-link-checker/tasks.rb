@@ -1,3 +1,5 @@
+require 'time'
+
 module LinkChecker
   class Tasks
     include LinkChecker::Callbacks
@@ -7,6 +9,7 @@ module LinkChecker
     def initialize(checker, task_klass, uri, methods, options = {})
       @uri = uri
       @retries_left = checker.retries
+      @retry_count = 0
       @methods_left = methods.dup
       @methods = methods.dup
       @task_klass = task_klass
@@ -24,8 +27,9 @@ module LinkChecker
     def execute!
       if retry?
         @retries_left -= 1
+        @retry_count += 1
         retry! @result
-        _queue_task(uri, method, original_uri || uri, options)
+        _queue_task(uri, method, original_uri || uri, options, delay: _retry_delay)
       elsif methods_left.any?
         @method = methods_left.shift
         @uri = URI(@uri) unless @uri.is_a?(URI)
@@ -58,11 +62,37 @@ module LinkChecker
     end
 
     def retry?
-      !first_time? && retries_left > 0
+      !first_time? && retries_left > 0 && retryable?
     end
 
-    def _queue_task(uri, method, original_uri, options = {})
+    def retryable?
+      return false unless result
+      return result.error? || result.failure? if checker.retry_status_codes.nil?
+      return %i[timeout connection].include?(result.error_type) if result.error?
+
+      result.failure? && checker.retry_status_codes.include?(result.code)
+    end
+
+    def _retry_delay
+      delay = checker.retry_after.zero? ? 0 : checker.retry_after * (checker.retry_backoff**(@retry_count - 1))
+      delay = [delay, _server_retry_delay].max if checker.respect_retry_after
+      delay *= 1 + (rand * checker.retry_jitter) if checker.retry_jitter.positive?
+      [delay, checker.max_retry_delay].min
+    end
+
+    def _server_retry_delay
+      headers = result.response_headers
+      value = Array(headers['Retry-After'] || headers['retry-after']).first.to_s.strip
+      return value.to_i if /\A\d+\z/.match?(value)
+
+      [Time.httpdate(value) - Time.now, 0].max
+    rescue ArgumentError
+      0
+    end
+
+    def _queue_task(uri, method, original_uri, options = {}, delay: 0)
       task = new_task(uri, method, original_uri, options)
+      task.delay = delay
       task.on :result do |result|
         _handle_result result
       end
