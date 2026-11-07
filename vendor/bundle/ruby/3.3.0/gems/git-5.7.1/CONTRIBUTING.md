@@ -1,0 +1,1241 @@
+<!--
+# @markup markdown
+# @title How To Contribute
+-->
+
+# Contributing to the git gem
+
+- [Summary](#summary)
+- [How to contribute](#how-to-contribute)
+- [How to report an issue or request a feature](#how-to-report-an-issue-or-request-a-feature)
+- [Local development setup](#local-development-setup)
+  - [Prerequisites](#prerequisites)
+    - [A note for Windows contributors](#a-note-for-windows-contributors)
+  - [Bootstrap the project](#bootstrap-the-project)
+  - [Verify the toolchain](#verify-the-toolchain)
+  - [Contributor validation policy](#contributor-validation-policy)
+- [How to submit a code or documentation change](#how-to-submit-a-code-or-documentation-change)
+  - [Commit your changes to a fork of `ruby-git`](#commit-your-changes-to-a-fork-of-ruby-git)
+  - [Create a pull request](#create-a-pull-request)
+  - [Get your pull request reviewed](#get-your-pull-request-reviewed)
+  - [Before requesting review](#before-requesting-review)
+- [Branch strategy](#branch-strategy)
+- [AI-assisted contributions](#ai-assisted-contributions)
+  - [Agent configuration](#agent-configuration)
+  - [Agent skills](#agent-skills)
+- [Design philosophy](#design-philosophy)
+- [Layered architecture](#layered-architecture)
+- [Implementing a git command](#implementing-a-git-command)
+  - [API design](#api-design)
+    - [Method placement](#method-placement)
+    - [Method naming](#method-naming)
+    - [Result class naming](#result-class-naming)
+    - [Parameter naming](#parameter-naming)
+    - [Parameter values](#parameter-values)
+    - [Output processing](#output-processing)
+  - [Implementation](#implementation)
+  - [Example implementations](#example-implementations)
+- [Coding standards](#coding-standards)
+  - [Commit message guidelines](#commit-message-guidelines)
+    - [What does this mean for contributors?](#what-does-this-mean-for-contributors)
+    - [What to know about Conventional Commits](#what-to-know-about-conventional-commits)
+    - [Issue and PR references](#issue-and-pr-references)
+  - [Testing guidelines](#testing-guidelines)
+    - [Test coverage policy](#test-coverage-policy)
+    - [Unit tests vs integration tests](#unit-tests-vs-integration-tests)
+  - [What ships in the gem](#what-ships-in-the-gem)
+- [Building a specific version of the Git command-line](#building-a-specific-version-of-the-git-command-line)
+  - [Install prerequisites](#install-prerequisites)
+  - [Obtain Git source code](#obtain-git-source-code)
+  - [Build git](#build-git)
+  - [Use the new Git version](#use-the-new-git-version)
+
+## Summary
+
+Thank you for your interest in contributing to the `ruby-git` project.
+
+This document provides guidelines for contributing to the `ruby-git` project. They
+may not cover every situation, so use your best judgment.
+
+If you have suggestions for improving these guidelines, please propose changes via a
+pull request.
+
+Please also review and adhere to our [Code of Conduct](CODE_OF_CONDUCT.md) when
+participating in the project. Governance and maintainer expectations are described in
+[GOVERNANCE.md](GOVERNANCE.md).
+
+## How to contribute
+
+You can contribute in the following ways:
+
+1. [Report an issue or request a
+   feature](#how-to-report-an-issue-or-request-a-feature)
+2. [Submit a code or documentation
+   change](#how-to-submit-a-code-or-documentation-change)
+
+## How to report an issue or request a feature
+
+`ruby-git` uses [GitHub
+Issues](https://help.github.com/en/github/managing-your-work-on-github/about-issues)
+for issue tracking and feature requests.
+
+To report an issue or request a feature, please [create a `ruby-git` GitHub
+issue](https://github.com/ruby-git/ruby-git/issues/new). Fill in the template as
+thoroughly as possible to describe the issue or feature request.
+
+## Local development setup
+
+Before submitting a change, set up a working local development environment.
+`bin/setup` automates the bootstrap and fails fast with a clear message when a
+prerequisite is missing.
+
+### Prerequisites
+
+| Tool | Required version | Notes |
+| --- | --- | --- |
+| Ruby | `>= 3.2.0` (matches `required_ruby_version` in [`git.gemspec`](git.gemspec)) | A version manager such as [rbenv](https://github.com/rbenv/rbenv), [asdf](https://asdf-vm.com/), [chruby](https://github.com/postmodern/chruby), or [rvm](https://rvm.io/) is recommended so you can match the project's CI matrix. |
+| Bundler | Any 2.x or 4.x | Install with `gem install bundler`. |
+| git | `>= 2.28.0` (matches `git.gemspec` `requirements`) | Older git versions are not supported and the test suite will not pass against them. |
+| Node.js / npm | Optional | Required only to install the local Conventional Commit `commit-msg` hook (Husky + commitlint). If npm is missing, `bin/setup` will warn and continue. CI will still validate commit messages. |
+| [lychee](https://lychee.cli.rs) | `>= 0.24.0` | Runs the markdown link check (`rake markdown:links`), which is part of the default task. The floor comes from [`.lychee.toml`](.lychee.toml): older releases cannot parse the enum form of `include_fragments`. Install with `brew install lychee` (macOS), `snap install lychee` (Ubuntu), `pacman -S lychee` (Arch), `winget install --id lycheeverse.lychee` (Windows), or see the [install docs](https://github.com/lycheeverse/lychee#installation). |
+
+#### A note for Windows contributors
+
+A few unit specs create real symlinks, which on Windows requires
+`SeCreateSymbolicLinkPrivilege`. A non-elevated process only holds that privilege
+when Developer Mode is enabled (Settings → System → For developers). Without it
+those specs skip rather than fail, so `bundle exec rake` still passes, but the
+behavior they cover goes unverified locally.
+
+The same privilege decides whether Git for Windows materializes the committed
+`.claude/skills` symlink, so enabling Developer Mode fixes both at once. See
+[Agent configuration](#agent-configuration).
+
+### Bootstrap the project
+
+From the project root, run:
+
+```shell
+bin/setup
+```
+
+`bin/setup` will:
+
+1. Verify the prerequisites above and exit with a non-zero status if any are
+   missing, or if Ruby, git, or lychee is out of date. (Bundler is only
+   checked for presence, not version.)
+2. Run `bundle install` to install Ruby gem dependencies.
+3. Run `npm install` (when npm is available) to install the Conventional Commit
+   `commit-msg` hook used by this project (Husky + commitlint). A separate
+   `pre-commit` hook is also installed that blocks direct commits to the
+   protected branches (`main`, `5.x`, `4.x`).
+4. Verify the toolchain by running `bundle exec rake --tasks`.
+
+`bin/setup` checks for [lychee](https://lychee.cli.rs) alongside Ruby, git, and
+Bundler, and exits non-zero when it is missing or too old. lychee is a Rust binary
+rather than a gem, so `bundle install` cannot supply it and `bin/setup` cannot
+install it for you. Every platform this project supports has a packaged build,
+and the error message names the command for yours.
+
+### Verify the toolchain
+
+Once `bin/setup` succeeds, confirm the full test and lint suite passes locally:
+
+```shell
+bundle exec rake
+```
+
+This runs everything CI checks: specs, RuboCop, the markdown link check, YARD,
+and the gem build. It is the canonical way to validate a change before
+requesting review.
+
+One caveat on the `links` task: passing locally does not guarantee the CI job
+passes, and the gap is the environment rather than the tool. A link whose
+capitalization is wrong resolves on a case-insensitive filesystem such as macOS and
+404s on the Linux runner, so `](docs/README.MD)` against a file named `README.md`
+looks fine locally and fails in CI. [`tasks/markdown.rake`](tasks/markdown.rake) lists
+this and the other differences. CI remains the authoritative link check.
+
+### Contributor validation policy
+
+Contributors are expected to run `bundle exec rake` locally and confirm it
+passes before requesting review on a pull request. Trivial documentation-only
+fixes (e.g., typo corrections in markdown files) are excepted. "CI passed" is
+not a substitute for local validation; it is a backstop. This applies equally to
+human-authored and AI-assisted contributions. See
+[AI-assisted contributions](#ai-assisted-contributions).
+
+## How to submit a code or documentation change
+
+Submitting a code or documentation change has three steps:
+
+1. [Commit your changes to a fork of
+   `ruby-git`](#commit-your-changes-to-a-fork-of-ruby-git) using [Conventional
+   Commits](#commit-message-guidelines)
+2. [Create a pull request](#create-a-pull-request)
+3. [Get your pull request reviewed](#get-your-pull-request-reviewed)
+
+### Commit your changes to a fork of `ruby-git`
+
+Make your changes in a fork of the `ruby-git` repository.
+
+### Create a pull request
+
+If you are not familiar with GitHub Pull Requests, please refer to [this
+article](https://help.github.com/articles/about-pull-requests/).
+
+Follow the instructions in the pull request template.
+
+### Get your pull request reviewed
+
+Code review takes place in a GitHub pull request using the [GitHub pull request
+review
+feature](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-reviews).
+
+Once your pull request is ready for review, request a review from at least one
+[maintainer](MAINTAINERS.md) and any other contributors you deem necessary.
+
+During the review process, you may need to make additional commits; squash them.
+You will also need to rebase your branch onto the latest version of the target
+branch (e.g., `main`, `5.x`, or `4.x`) before merging.
+
+At least one approval from a project maintainer is required before your pull request
+can be merged. The maintainer is responsible for ensuring that the pull request meets
+[the project's coding standards](#coding-standards).
+
+### Before requesting review
+
+Before moving a pull request out of draft or requesting a review, confirm:
+
+- [ ] `bundle exec rake` passes locally on your branch (see
+  [Local development setup](#local-development-setup)).
+- [ ] New or changed code has accompanying tests under `spec/`
+  (see [Unit tests vs integration tests](#unit-tests-vs-integration-tests)).
+- [ ] Every commit message follows [Conventional Commits](#commit-message-guidelines).
+- [ ] User-facing changes are documented in `README.md` and/or YARD as appropriate.
+
+These checks mirror what reviewers and CI will look for; running them locally
+first keeps the review cycle short.
+
+## Branch strategy
+
+This project maintains `main` plus one maintenance branch for each supported previous
+major series:
+
+- **`main`**: All development. It releases the next version of the gem, including
+  the next major version. Its next release is v6.0.0; every further v5.x release is
+  cut from `5.x`.
+- **`5.x`** and **`4.x`**: The maintenance branches for the v5.x and v4.x series. Each
+  receives bug fixes and security fixes, and backward-compatible features at the
+  maintainers' discretion.
+
+The README's [Release support policy](README.md#release-support-policy) says how long
+each major series is supported.
+
+When submitting a pull request:
+
+- **New features and breaking changes**: Target the `main` branch
+- **Bug fixes**: Target `main`, and maintainers will backport to the maintenance
+  branches if applicable
+- **Security fixes**: Target `main` and every affected maintenance branch, or only a
+  maintenance branch if the issue affects that series alone
+
+Removing a deprecated API follows the
+[deprecation policy](.github/skills/breaking-change-analysis/SKILL.md#step-4-deprecation-policy):
+
+A removal PR merges to main only when its deprecation warning and `UPGRADING.md` entry
+are contained in a previous normal release. Once any removal has merged to main, main
+becomes the release line for the next major version. If another release of the
+previous major is needed, it is cut from a branch created for that major (e.g. `4.x`
+or `5.x`).
+
+## AI-assisted contributions
+
+AI-assisted contributions are welcome. Please review and apply our [AI
+Policy](AI_POLICY.md) before submitting changes. You are responsible for
+understanding and verifying any AI-assisted work included in PRs and ensuring it
+meets our standards for quality, security, and licensing.
+
+The human submitter, not the AI agent, is responsible for ensuring that
+`bundle exec rake` passes locally before requesting review. This is true even
+when the change was authored end-to-end by an agent. "The agent ran the tests"
+and "CI is green" are not substitutes for the submitter running
+[the local validation step](#contributor-validation-policy) themselves; CI is a
+backstop, not a primary validation surface.
+
+### Agent configuration
+
+Agent configuration is shared: each piece of guidance is stored once and surfaced to
+every supported agent.
+
+| Content | Canonical location | Also read by |
+| --- | --- | --- |
+| Project instructions | [`.github/copilot-instructions.md`](.github/copilot-instructions.md) | Claude Code, via an import in [`CLAUDE.md`](CLAUDE.md) |
+| Skills | [`.github/skills/`](.github/skills/) | Claude Code, via the `.claude/skills` symlink |
+| Setup hook | [`.github/hooks/run-bin-setup-once.sh`](.github/hooks/run-bin-setup-once.sh) | Claude Code, via `.claude/settings.json` |
+
+Always edit the canonical file. The Claude Code side is a pointer in every case, so
+changes reach both agents without a sync step.
+
+One caveat: `.claude/skills` is a committed symlink. Git for Windows only
+materializes symlinks when `core.symlinks` is enabled (which requires Developer Mode
+or an elevated shell). Without it, Windows contributors get a plain text file there
+and Claude Code silently loads no skills; either enable symlinks or point your agent
+at [`.github/skills/`](.github/skills/) directly. Copilot is unaffected.
+
+The symlink stays out of the published gem, so it never reaches users. See
+[What ships in the gem](#what-ships-in-the-gem).
+
+### Agent skills
+
+If you use an AI coding agent that understands repository skills, the
+[`.github/skills/`](.github/skills/) directory contains optional, project-specific
+guidance that mirrors maintainer expectations:
+
+- [`project-context`](.github/skills/project-context/SKILL.md): architecture, coding
+  standards, design philosophy, and compatibility requirements
+- [`development-workflow`](.github/skills/development-workflow/SKILL.md): TDD workflow
+  for bug fixes, features, refactoring, and maintenance tasks
+- [`command-implementation`](.github/skills/command-implementation/SKILL.md) and
+  [`facade-implementation`](.github/skills/facade-implementation/SKILL.md): guidance for
+  adding or updating command classes and `Git::Repository` facade methods
+- [`review-arguments-dsl`](.github/skills/review-arguments-dsl/SKILL.md): audits
+  `arguments do ... end` blocks against the git CLI
+- [`rspec-unit-testing-standards`](.github/skills/rspec-unit-testing-standards/SKILL.md),
+  [`command-test-conventions`](.github/skills/command-test-conventions/SKILL.md), and
+  [`facade-test-conventions`](.github/skills/facade-test-conventions/SKILL.md): testing
+  conventions for new and updated code
+- [`yard-documentation`](.github/skills/yard-documentation/SKILL.md),
+  [`command-yard-documentation`](.github/skills/command-yard-documentation/SKILL.md), and
+  [`facade-yard-documentation`](.github/skills/facade-yard-documentation/SKILL.md):
+  documentation standards
+- [`test-debugging`](.github/skills/test-debugging/SKILL.md) and
+  [`ci-cd-troubleshooting`](.github/skills/ci-cd-troubleshooting/SKILL.md): help for
+  failing or flaky tests and CI failures
+- [`breaking-change-analysis`](.github/skills/breaking-change-analysis/SKILL.md): impact
+  analysis before removing methods, changing interfaces, or planning deprecations
+- [`pr-readiness-review`](.github/skills/pr-readiness-review/SKILL.md): final checks
+  before requesting review
+
+## Design philosophy
+
+The `git` gem lets users apply what they already know about Git while working in
+idiomatic Ruby.
+
+Its public API is a lightweight wrapper around the `git` command-line tool that
+gives Ruby developers a direct way to run Git programmatically.
+
+This gem follows the principle of least surprise: it does not add unnecessary
+abstraction layers or modify Git's core functionality. It stays close to the existing `git`
+command-line interface and avoids extensions or alterations that could lead to
+unexpected behavior.
+
+`git` commands generally translate to `Git::Repository` methods of the same name.
+Positional arguments map to the `git` CLI operands (such as paths and SHAs) in the
+same order. Keyword arguments map to `git` CLI options by long OR short name.
+
+Some examples:
+
+- To execute `git clone <url> --depth=1`, call `Git.clone(url, depth: 1)`
+- To execute `git add <path> --force`, call `Git::Repository#add(path, force: true)`
+
+## Layered architecture
+
+The `git` gem is organized into three architectural layers:
+
+| Layer | Responsibility | Mechanism |
+| --- | --- | --- |
+| **Facade** (`Git::Repository` and `Git`) | Public API | Normalizes Ruby arguments, sets safe defaults, calls one or more `Git::Commands::*` classes, and may parse output into public Ruby objects |
+| **Command** (`Git::Commands::*`) | Neutral git CLI interface | Declares CLI arguments via the [Arguments DSL](lib/git/commands/arguments.rb), builds the git argv and executes git via `#call`, and returns `Git::CommandLine::Result` |
+| **Execution** (`Git::ExecutionContext::*`) | Execution context and subprocess defaults | Carries execution settings such as working directory, environment, timeout, binary path, and logging; runs the git CLI with default global options (such as `-c color.ui=false`) and subprocess environment variables (such as a platform-conditional `LC_ALL`, which is `en_US.UTF-8` on macOS and `C.UTF-8` elsewhere) |
+
+Command classes (`Git::Commands::*`) are **faithful, neutral representations of the
+git CLI**. Each command class does the following:
+
+- Declares acceptable CLI arguments and options via the
+  [Arguments DSL](lib/git/commands/arguments.rb)
+- Defines a `#call` method which:
+  - Maps its parameters to the git argv using the declared arguments
+  - Executes a git CLI command via `Git::ExecutionContext`
+  - Returns the unprocessed git CLI result as a `Git::CommandLine::Result` object
+
+Command classes should not embed choices such as output format flags, editor
+suppression, progress output, or verbose mode. These decisions belong to the facade
+layer which sets them as needed. The facade layer may give callers the choice to
+override those decisions when appropriate (e.g., running in a TTY-attached
+environment where an editor is desired).
+
+For example:
+
+- **Anti-pattern:** declaring non-overridable and non-default options in the Arguments
+  DSL to control output such as `literal '--no-edit'`, `literal '--verbose'`, or
+  `literal '--no-progress'` inside a command class. This embeds policy in the wrong
+  layer.
+- **Correct pattern:** declaring options which allow the user of the command (often a
+  facade method) to set desired values such as: `flag_option :edit, negatable: true`.
+  This allows the facade to either accept the default or to hard code `edit: false`
+  if it is needed.
+
+This separation keeps command classes reusable across facade methods with different
+policy needs. For example, a facade method that parses command output may pass
+options such as `no_color: true`, `z: true`, or a fixed `format:` value so git emits
+a stable, parseable output shape. Those parser-contract options belong at the facade
+call site, not as hard-coded literals in the command class. Other facade methods can
+reuse the same command class with different options.
+
+## Implementing a git command
+
+Start with the official git documentation page for the command (e.g., `man git-add`
+or the [git-scm.com](https://git-scm.com/docs) reference page). Its SYNOPSIS line
+identifies the positional operands, and its OPTIONS section identifies the flags and
+value options the Ruby method must expose.
+
+Implementing the command has two major tasks: [API design](#api-design) and
+[Implementation](#implementation).
+
+### API design
+
+This section covers where git command methods belong, how to name them, and how to
+handle parameters and output. These describe the public interface that gem
+users will see.
+
+#### Method placement
+
+The public API is `Git::Repository` (and the `Git` module). These facade methods must
+be exposed there, even when their implementation lives in private mixin modules or
+`Git::Commands::*` classes.
+
+**Repository factory commands** are exposed via `Git` as module methods and
+are usually implemented in the `Git::Factories` mixin. These methods return a
+`Git::Repository` object for subsequent operations:
+
+```ruby
+repo = Git.clone('https://github.com/user/repo.git', 'local_path')
+repo = Git.init('new_repo', initial_branch: 'main')
+repo = Git.open('.')
+```
+
+**Repository-scoped commands** require a repository context. These methods are
+exposed via `Git::Repository` instance methods and are usually implemented in a
+`Git::Repository::*` mixin.
+
+```ruby
+repo.add('file.txt')
+repo.commit('Add file')
+repo.log
+```
+
+**Global commands** do not require a repository context. Expose these
+as methods on the `Git` module:
+
+```ruby
+Git.config_get('user.name', global: true)
+Git.config_set('user.email', 'user@example.com', global: true)
+```
+
+Some commands, like `git config` commands, can be called either in a global or
+repository scope. Here is how that was solved for the config commands:
+
+- When called via the `Git` module, a scope parameter such as `global: true`,
+  `system: true`, or `file: <filename>` MUST be given. `local` and `worktree`
+  scopes are not allowed.
+
+- When called via a `Git::Repository` instance, `local: true` and `worktree: true`
+  scope parameters may be given, with `local` being the default if no scope is given.
+  `global`, `system`, and `file` scopes are also allowed.
+
+#### Method naming
+
+Each method corresponds directly to a `git` command. For example, the `git add`
+command is implemented as `Git::Repository#add`, and the `git ls-files` command is
+implemented as `Git::Repository#ls_files`.
+
+When a single Git command serves multiple distinct purposes, method names should use
+the git command name as a prefix, followed by a descriptive suffix indicating the
+specific function. The suffix should correspond to the git option that distinguishes
+the behavior.
+
+For example, `git config` supports `--get`, `--set`, `--list`, `--unset`, and other
+options. These are implemented as separate methods:
+
+```ruby
+repo.config_get('user.name')              # git config --get user.name
+repo.config_set('user.name', 'Scott')     # git config user.name Scott
+repo.config_list                          # git config --list
+repo.config_unset('user.name')            # git config --unset user.name
+repo.config_get_all('remote.origin.url')  # git config --get-all remote.origin.url
+```
+
+Aliases may be added to provide friendlier method names where appropriate.
+
+See also [Output processing](#output-processing) for when different output formats
+require separate methods.
+
+#### Result class naming
+
+Parsed result objects returned from facade methods follow a reserved suffix
+convention:
+
+- **`*Info`**: a parsed metadata struct returned from a query (e.g., `BranchInfo`,
+  `TagInfo`, `StashInfo`, `DiffInfo`). Always lives in the top-level `Git::`
+  namespace.
+- **`*Result`**: the outcome of a mutating or destructive operation (e.g.,
+  `BranchDeleteResult`, `TagDeleteResult`). Also lives in `Git::`.
+
+Do not use these suffixes on `Git::Commands::*` command classes. Those are
+subprocess runners, not data objects. A reader seeing `Commands::Foo::BarInfo`
+expects a parsed struct, not a class that shells out to git.
+
+#### Parameter naming
+
+Parameters within the `git` gem methods are named after their corresponding long
+command-line options, so developers already accustomed to Git will recognize them.
+
+For example, `git config --global` becomes `global: true`, and `git config --file`
+becomes `file: '/path/to/config'`.
+
+As a lightweight wrapper, the gem passes options directly to the git command-line.
+This means git itself will validate option combinations and report errors. This
+approach is preferred as long as the error messages returned by git are actionable
+and understandable for users of the gem.
+
+#### Parameter values
+
+This section defines how git command-line options and positional arguments map to
+Ruby method parameters. Contributors must follow these conventions:
+
+##### Options
+
+Git command-line options are passed as keyword arguments in the Ruby API. Methods
+accept these via an options splat parameter (e.g., `def replace(object, replacement,
+**options)`). Each option is mapped to a keyword argument as described below.
+
+- **Boolean flags**: Git options like `--global` or `--bare` are mapped to `global:
+  true` or `bare: true`. Omit the key or use `false` to leave the flag unset.
+  - `git config --global` → `global: true`
+
+- **Negated boolean flags**: Options like `--no-reflogs` are mapped to `no_reflogs:
+  true`.
+  - `git branch --no-reflogs` → `no_reflogs: true`
+
+- **Value options**: Options that take a value, such as `--file <path>` or `--author
+  <name>`, are mapped as `file: '/path'`, `author: 'Name'`.
+  - `git config --file /tmp/config` → `file: '/tmp/config'`
+
+- **Options with optional values**: If a git option can be used as a flag or with a
+  value (e.g., `--color` or `--color=always`), use `color: true` for the flag form,
+  or `color: 'always'` for the value form.
+  - `git log --color` → `color: true`
+  - `git log --color=always` → `color: 'always'`
+
+- **List/array options**: Options that can be repeated or take multiple values (e.g.,
+  `--exclude <pattern>`, `--pathspec-from-file <file>`) are mapped to arrays:
+  `exclude: ['foo', 'bar']`.
+  - `git ls-files --exclude=foo --exclude=bar` → `exclude: ['foo', 'bar']`
+
+- **Key-value pair options**: Options like `-c key=value` are mapped as `c: { 'key'
+  => 'value' }` or as an array of pairs if multiple are allowed.
+  - `git -c user.name=Scott` → `c: { 'user.name' => 'Scott' }`
+
+##### Positional arguments
+
+Arguments that are not options (e.g., file names, branch names) are passed as method
+arguments, not as keyword arguments.
+
+- **Only single-valued positional arguments**: If a command has one or more
+  single-valued positional arguments (e.g., `<arg1>` or `<arg1> <arg2>`), pass each
+  as a separate method argument, in the order they appear in the official git
+  documentation and CLI usage. Optional arguments (indicated by `[<arg>]`) should
+  default to `nil`.
+  - `git cmd <object>` → `def cmd(object)` (fictitious command)
+  - `git replace <object> <replacement>` → `def replace(object, replacement)`
+  - `git clone <repository> [<directory>]` → `def clone(repository, directory = nil)`
+
+- **Single multi-valued positional argument**: If a command has a single multi-valued
+  positional argument (e.g., `<pathspec>...` or `[<pathspec>...]`), use a splat
+  parameter to accept zero or more values (optional) or one or more values
+  (required).
+  - `git add [<pathspec>...]` → `def add(*paths)`
+
+- **Mixed single-valued and multi-valued positional arguments, `--` separated
+  (independently reachable groups)**: When a git command separates two optional
+  groups with `--` (e.g., `[<tree-ish>] [-- <pathspec>...]`), callers may want
+  to supply the post-`--` group *without* supplying the first group. Use the
+  single-valued argument as a regular optional parameter and the multi-valued
+  group as a keyword argument with an empty array default. The keyword argument
+  should accept a single value or an array; wrap a single value in an array
+  internally.
+  - `git checkout [<branch>] [-- <pathspec>...]` → `def checkout(branch = nil,
+    pathspecs: [])`
+  - `git diff [<tree-ish>] [-- <pathspec>...]` → `def diff(tree_ish = nil,
+    pathspec: [])`
+  - Callers can then do `checkout(pathspecs: ['file.rb'])` (no branch) or
+    `diff('HEAD~3', pathspec: ['file.rb'])` (both), with no ambiguity.
+
+- **Multiple optional single-valued positional arguments, pure nesting
+  (second only meaningful with first)**: When the git SYNOPSIS shows nested
+  optional brackets and the inner operand is only useful in the presence of the
+  outer one, both arguments may be regular optional parameters in left-to-right
+  order. A caller would never supply the second without the first.
+  - `git diff [<commit1> [<commit2>]]` → `def diff(commit1 = nil, commit2 = nil)`
+  - Callers can do `diff` (no args), `diff('HEAD~3')`, or `diff('HEAD~3', 'HEAD')`.
+    There is no case where someone would pass `commit2` without `commit1`.
+
+##### Cross-argument constraints
+
+Constraints that span arguments — mutually exclusive options, required groups,
+forbidden value combinations — are not validated in Ruby. Command classes pass the
+arguments through and leave the judgment to git. When git rejects a combination,
+the rejection surfaces as a `Git::FailedError` carrying git's own message; a
+combination git accepts, even one it silently ignores, raises nothing. The decision and its rationale are
+recorded in
+[ADR-0003](docs/adr/0003-validation-of-git-semantics-is-delegated-to-git.md).
+
+The arguments DSL does provide constraint declarations (`conflicts`, `requires`,
+`requires_one_of`, `requires_exactly_one_of`, `forbid_values`, `allowed_values`),
+which raise `ArgumentError` at bind time. Declare one only when git cannot report
+the error itself, under the two exception criteria defined in
+[Validation Boundaries](.github/skills/project-context/SKILL.md#validation-boundaries):
+
+- **The argv-invisible exception**: the argument never appears in git's argv
+  (`skip_cli: true` operands, `execution_option` entries), so git has no token to
+  object to. The two current uses are `Git::Commands::CatFile::Batch` (`conflicts`
+  and `requires_one_of` on its stdin-fed `:object` operand) and
+  `Git::Commands::Archive` (`conflicts :output, :out`, where `:out` is a Ruby IO
+  object).
+- **The silent-wrong-result exception**: git accepts the combination but silently
+  discards data or produces a wrong answer. A declaration under this exception
+  needs a code comment explaining why, the git version(s) where the behavior was
+  verified, and a test.
+
+These conventions ensure the API is predictable and closely aligned with the git CLI.
+If a new option type is encountered, extend this section to document the mapping.
+
+#### Output processing
+
+The `git` gem translates the output of many Git commands into Ruby objects that are
+easier to work with programmatically.
+
+These Ruby objects often include methods for further Git operations where useful,
+while staying close to the underlying Git behavior.
+
+When a single git command can produce distinctly different output types based on its
+options, implement separate methods for each output type. Follow the same naming
+convention used for commands with multiple purposes: use the git command name as a
+prefix, followed by a suffix that describes the specific output type or
+functionality.
+
+For example, `git diff` can produce full diffs, statistical summaries, or path status
+information depending on the options used. These are implemented as separate methods:
+
+```ruby
+repo.diff_full('HEAD~1', 'HEAD')       # Full diff output (git diff -p)
+repo.diff_stats('HEAD~1', 'HEAD')      # Statistical summary (git diff --numstat)
+repo.diff_path_status('HEAD~1', 'HEAD') # File paths and status (git diff --name-status)
+```
+
+This gives each method a clear, predictable return type and parsing logic targeted
+to its output format.
+
+### Implementation
+
+The gem uses the three-layer architecture described in
+[Layered architecture](#layered-architecture). When wrapping a git command, keep the
+layer responsibilities separate:
+
+1. **Design the public API** using the guidelines in this section (placement, naming,
+   parameters, output)
+
+2. **Create a command class** in `lib/git/commands/` that:
+   - Accepts a `Git::ExecutionContext` at initialization
+   - Defines arguments using the [Arguments DSL](lib/git/commands/arguments.rb)
+   - Returns a raw `Git::CommandLine::Result`
+
+3. **Add the facade method** to `Git::Repository` (or the `Git` module) that applies
+   facade policy, calls the command class, and parses the raw result when returning
+   structured Ruby objects.
+
+Steps 2 and 3 correspond to the Command and Facade layers, respectively. The
+Execution layer (`Git::ExecutionContext::*`) already exists. A command class only
+consumes it via `@execution_context`; it is not authored per command.
+
+Example structure for `git add`:
+
+```ruby
+# lib/git/commands/add.rb (internal)
+require 'git/commands/base'
+
+module Git
+  module Commands
+    class Add < Git::Commands::Base
+      arguments do
+        literal 'add'
+        flag_option %i[verbose v]
+        flag_option %i[force f]
+        # ...additional flag and value options elided for brevity...
+        end_of_options
+        operand :pathspec, repeatable: true
+      end
+
+      # @overload call(*pathspec, **options)
+      #
+      #   Execute the `git add` command
+      #
+      #   @param pathspec [Array<String>] files to be added to the repository
+      #     (relative to the worktree root)
+      #
+      #   @param options [Hash] command options
+      #
+      #   @option options [Boolean, nil] :verbose (nil) be verbose
+      #
+      #     Alias: :v
+      #
+      #   @option options [Boolean, nil] :force (nil) allow adding otherwise ignored
+      #     files
+      #
+      #     Alias: :f
+      #
+      #   @return [Git::CommandLine::Result] the result of calling `git add`
+      #
+      #   @raise [ArgumentError] if unsupported options are provided
+      #
+      #   @raise [Git::FailedError] if git exits with a non-zero exit status
+      #
+      #   @api public
+      #
+      def call(*, **)
+        super
+      end
+    end
+  end
+end
+```
+
+Here is the corresponding facade method that calls it:
+
+```ruby
+# lib/git/repository/staging.rb (facade, a topic module included into Git::Repository)
+module Git
+  class Repository
+    module Staging
+      ADD_ALLOWED_OPTS = %i[all force].freeze
+      private_constant :ADD_ALLOWED_OPTS
+
+      def add(paths = '.', **)
+        SharedPrivate.assert_valid_opts!(ADD_ALLOWED_OPTS, **)
+        Git::Commands::Add.new(@execution_context).call(*Array(paths), **).stdout
+      end
+    end
+  end
+end
+```
+
+**How `Git::Commands::Base` works**: `Base` provides a default `#initialize` (accepts
+an `execution_context`) and `#call(*, **)` (binds arguments via the DSL, dispatches to
+`@execution_context.command_capturing` or `@execution_context.command_streaming`
+depending on whether an `out:` execution option is present, and validates the exit
+status). Simple commands need only declare `arguments do … end` and inherit
+`Base#call(*, **)` unchanged. To attach command-specific YARD documentation to the
+inherited `call`, use either a `# @!method call(*, **)` directive (when there is no
+`def call` in the class) or place the YARD tags directly above an explicit
+`def call(*, **); super; end`. Both patterns produce identical runtime behavior.
+Only add real logic to `def call` when the command needs custom behavior beyond what
+`Base` provides.
+
+Override `call` explicitly in three situations:
+
+1. **Input validation**: guard `ArgumentError` for invalid option combinations that
+   the DSL cannot express (e.g., empty operands without a compensating flag).
+2. **Stdin via IO pipe**: commands using the `--batch` / `--batch-check` protocol
+   must feed object names to the subprocess's stdin. Use the inherited
+   `Base#with_stdin(content)`, which opens an `IO.pipe`, writes the string content,
+   and yields the read end as `in:`. Do not open a pipe manually. `StringIO` is
+   not accepted by `Process.spawn` because it has no file descriptor.
+3. **Non-trivial option routing**: when multiple call shapes require different
+   argument sets built separately before dispatching.
+
+When overriding, work with `args_definition.bind(...)` directly and delegate
+exit-status handling to the inherited `validate_exit_status!`. Extract bulk logic
+into private helpers to satisfy RuboCop `Metrics` thresholds:
+
+```ruby
+def call(*objects, **options)
+  raise ArgumentError, '...' if objects.empty? && !options[:batch_all_objects]
+
+  bound = args_definition.bind(*objects, **options)
+  with_stdin(objects.map { |o| "#{o}\n" }.join) { |reader| run_batch(bound, reader) }
+end
+
+private
+
+def run_batch(bound, reader)
+  result = @execution_context.command_capturing(*bound, in: reader, **bound.execution_options, raise_on_failure: false)
+  validate_exit_status!(result)
+  result
+end
+```
+
+Option validation happens at two layers: the `Git::Repository` facade method calls
+`SharedPrivate.assert_valid_opts!` against its own documented public option list first,
+then the [`Arguments` DSL](lib/git/commands/arguments.rb) raises `ArgumentError` for
+any keyword the command class does not recognize during argument binding. The facade
+also handles translation from single values or arrays to the splat format.
+
+> **YARD documentation note:** Because `call` uses anonymous argument forwarding
+> (`*, **`), YARD cannot infer its signature. Document it with an `@overload` that names
+> the operands and an `**options` hash (e.g., `@overload call(*pathspec, **options)`),
+> add a `@param options [Hash]` tag, and document each supported keyword with its own
+> `@option` tag. When the class defines no `def call`, place these tags under a
+> `# @!method call(*, **)` directive (as shown above); when it defines an explicit
+> `def call` override, place them directly above that method instead.
+>
+> **Testing requirement:** When defining arguments with the DSL, you must write RSpec
+> tests that verify each argument handles valid values correctly (booleans, strings,
+> arrays) and handles invalid values appropriately. Use a separate `context` block for
+> testing each option to ensure clarity and isolation. See
+> `spec/unit/git/commands/add_spec.rb` for examples of comprehensive argument testing.
+
+For factory methods and module-level commands, the pattern is the same but
+`Git::ExecutionContext::Global` is used instead of the repository's
+`@execution_context`:
+
+```ruby
+# Factory method (Git.clone): creates a global context, runs the command, returns a repository
+module Git
+  def self.clone(repository_url, directory = nil, options = {})
+    context = Git::ExecutionContext::Global.new
+    Git::Commands::Clone.new(context).call(repository_url, directory, **options)
+    # ... then build and return a Git::Repository for the cloned working tree
+  end
+end
+```
+
+> **Note:** `Git::Repository` facade methods pass `@execution_context` (a
+> `Git::ExecutionContext::Repository`) to each command class they invoke.
+> Module-level methods such as `Git.clone` construct a
+> `Git::ExecutionContext::Global` instead.
+
+### Example implementations
+
+The following command classes demonstrate implementation patterns.
+See `lib/git/commands/` and `spec/unit/git/commands/` for the full implementations:
+
+- **Simple command**: `Git::Commands::Add`, straightforward argument building with
+  the [Arguments DSL](lib/git/commands/arguments.rb)
+- **Command with parser-backed facade result**: `Git::Commands::Fsck` with
+  `Git::Parsers::Fsck`, which returns raw command output that the facade parses into
+  structured Ruby objects
+- **Factory command**: `Git::Commands::Clone`, used by `Git.clone`; returns a
+  `Git::CommandLine::Result` like all command classes (the factory method then builds
+  and returns a `Git::Repository` from the cloned working tree)
+- **Multiple output modes**: `Git::Commands::Diff`, which declares output-mode options that
+  facade methods choose from when building different Ruby-facing results
+- **Multi-context command family**: `Git::Commands::ConfigOptionSyntax::*`, command
+  classes shared by module-level and repository-scoped config methods
+
+## Coding standards
+
+All pull requests must meet the following requirements:
+
+### Commit message guidelines
+
+The `ruby-git` project has adopted the [Conventional Commits
+standard](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages.
+
+Structured commit messages let tools determine the semantic version bump (patch,
+minor, major) from the commits merged and generate an accurate `CHANGELOG.md`
+automatically. A standardized format also makes the history easier to read at a
+glance.
+
+#### What does this mean for contributors?
+
+All commits to this repository must follow the [Conventional Commits
+standard](https://www.conventionalcommits.org/en/v1.0.0/). Commits that do not
+follow it will fail the CI build, and PRs that include them will not be merged.
+
+A git `commit-msg` hook (Husky + commitlint) that validates your Conventional
+Commit messages locally is installed automatically as part of the project
+bootstrap. See [Local development setup](#local-development-setup). The hook
+depends on Node.js and npm; if those are not installed, `bin/setup` will warn
+and skip the hook, and commit-message validation will only run in CI.
+
+#### What to know about Conventional Commits
+
+The simplest conventional commit is in the form `type: description` where `type`
+indicates the type of change and `description` is your usual commit message (with
+some limitations).
+
+- Types include: `feat`, `fix`, `docs`, `test`, `refactor`, and `chore`. See the full
+  list of types supported in [.commitlintrc.yml](.commitlintrc.yml).
+- The description must (1) not start with an upper case letter, (2) be no more than
+  100 characters, and (3) not end with punctuation.
+
+Examples of valid commits:
+
+- `feat: add the --merges option to Git::Repository#log`
+- `fix: exception thrown by Git::Repository#log when repo has no commits`
+- `docs: add conventional commit announcement to README.md`
+
+Commits that include breaking changes must include an exclamation mark before the
+colon:
+
+- `feat!: removed Git::Repository#commit_force`
+
+The commit messages drive how the version is incremented for each release:
+
+- a release containing a breaking change gets a major version increment
+- a release containing a new feature gets a minor increment
+- a release containing neither gets a patch increment
+
+The full conventional commit format is:
+
+```text
+<type>[optional scope][!]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+- `optional body` may include multiple lines of descriptive text limited to 100 chars
+  each
+- `optional footers` only uses `BREAKING CHANGE: <description>` where description
+  should describe the nature of the backward incompatibility.
+
+The `BREAKING CHANGE:` footer flags a backward incompatible change even if the
+type is not marked with an exclamation mark. Other footers are allowed
+but not acted upon.
+
+See [the Conventional Commits
+specification](https://www.conventionalcommits.org/en/v1.0.0/) for more details.
+
+#### Issue and PR references
+
+Due to a parser limitation in commitlint, using `#<number>` anywhere in the commit
+**body** causes everything from that line onward to be treated as a footer, which
+triggers a `footer-leading-blank` error.
+
+To avoid this:
+
+- **In the body**, omit the `#` when mentioning an issue or PR: write `issue 1000`,
+  not `issue #1000`.
+- **In the footer**, always include `#` for closing references:
+  `Closes #1000`, `Fixes #1000`, or `Resolves #1000`.
+- If you only want to mention an issue for context (not close it), omit the `#` in
+  the body. No footer line is needed.
+
+To validate a commit message before committing:
+
+```bash
+npx commitlint --format @commitlint/format < commit_msg.txt
+```
+
+To see how commitlint has parsed a commit message:
+
+```bash
+cat commit_msg.txt | node -e "
+const parse = require('@commitlint/parse');
+let msg = '';
+process.stdin.on('data', d => msg += d);
+process.stdin.on('end', () =>
+  parse.default(msg.trim()).then(r => console.log(JSON.stringify(r, null, 2)))
+);
+" | jq
+```
+
+### Testing guidelines
+
+- All changes must be accompanied by new or modified unit and integration tests as
+  appropriate.
+- The entire test suite must pass when `bundle exec rake` is run from the project's
+  local working copy.
+- Test runs are covered by SimpleCov by default. Set `COVERAGE=false` (or `0`/`no`/
+  `off`) to skip coverage, e.g. `COVERAGE=false bundle exec rake spec`.
+  `rake spec:integration` always disables coverage, regardless of `COVERAGE`:
+  integration tests aren't meant to be exhaustive, so tracking their coverage would
+  misleadingly suggest that low integration coverage is a problem to fix.
+- `rake spec:integration` runs in parallel (via `parallel_tests`) on MRI. Set
+  `PARALLEL_TESTS=false` (or `0`/`no`/`off`) to force serial execution, e.g.
+  `PARALLEL_TESTS=false bundle exec rake spec:integration`. A run narrowed by `SPEC`
+  to a single spec file always runs serially. There is nothing to divide across
+  workers, and serial execution gives per-example (documentation) output.
+- Set `SPEC=<glob>` to run specific files instead of a task's whole directory, e.g.
+  `SPEC=spec/unit/git/version_spec.rb bundle exec rake spec:unit`.
+- Each task runs only the matches that live under its own directory, so one glob
+  spanning `spec/unit/` and `spec/integration/` can drive `bundle exec rake spec` and
+  exercise both layers of an area in a single command:
+
+  ```bash
+  # Unit and integration specs for the add command
+  SPEC=spec/**/git/commands/add_spec.rb bundle exec rake spec
+
+  # Unit and integration specs for every command class
+  SPEC=spec/**/git/commands bundle exec rake spec
+  ```
+
+  The glob is expanded by Rake, not the shell, so `**` works the same in any shell.
+  A task whose directory contains none of the matches is skipped with a message:
+  `SPEC=spec/unit/...` on `rake spec` runs the unit specs and skips
+  `spec:integration`. A glob matching nothing anywhere fails the task outright.
+
+This project uses RSpec (`spec/`) as its sole test framework. Structure,
+naming, setup, stubbing, and coverage rules for unit specs are defined in the
+[`rspec-unit-testing-standards`](.github/skills/rspec-unit-testing-standards/SKILL.md)
+skill. Follow it when writing or reviewing specs under `spec/unit/`.
+
+#### Test coverage policy
+
+**Every pull request to `main` or `5.x` must keep `bundle exec rake spec:unit` at
+100% line coverage and 100% branch coverage of `lib/`.** CI fails the build when it
+drops below either threshold.
+
+This is enforceable without being onerous because unit coverage in this project is
+deterministic: `lib/` has no Ruby-version, Ruby-engine, or platform conditionals, and
+the handful of unit specs that are conditionally skipped are redundant for coverage:
+every `lib/` line and branch they reach is also reached by a spec that always runs.
+Every supported MRI runtime therefore measures exactly the same lines and branches, so
+a coverage failure is always something the pull request introduced.
+
+A new conditional skip in `spec/unit/` must preserve that property. Verify it on a
+host where the guard actually skips: run the full unit suite there and confirm it
+still reports 100% line and branch coverage. A conditionally skipped unit spec that
+is the only thing covering a line would turn this gate into a platform-dependent
+failure, which is exactly what the policy exists to prevent.
+
+Write the guard the same way the rest of the suite does: a reusable predicate in
+`spec/spec_helper.rb` (`unless_git`, `unless_command`, `unless_pcre`,
+`unless_ci_build`) used as `skip:` metadata, or, for a one-off capability that the
+`before` block is already exercising, a `rescue` in that block that calls `skip`.
+
+What the policy does and does not cover:
+
+- **Scope is the unit suite on MRI.** Integration specs are deliberately not
+  exhaustive and are not measured (`rake spec:integration` always disables coverage).
+  JRuby and TruffleRuby do not produce reliable coverage data and are not measured.
+- **Enforcement applies to full-suite runs.** A focused run
+  (`SPEC=<glob> bundle exec rake spec:unit`, or `bundle exec rspec <file>`) still
+  reports coverage but will not fail on it, so the usual edit-test loop is unaffected.
+  Set `FAIL_ON_LOW_COVERAGE=true` to force enforcement on for a focused run.
+- **A focused run lists gaps only in the code it is about.** The reported percentage is
+  always for the whole of `lib/`, but the list of uncovered lines and branches is scoped
+  to the files the run tests: the classes it describes, plus the `lib/` file each spec
+  file mirrors. So a focused run answers "is what I just changed fully covered?" without
+  waiting for CI:
+
+  ```text
+  Reporting uncovered lines and branches for 1 of 225 files.
+
+  No uncovered lines and branches in this file.
+  ```
+
+  Ignore the percentage on a focused run; it is low because `spec_helper` loads all of
+  `lib/`, not because anything is wrong. Set `LIST_UNCOVERED_FILES=all` to list gaps for
+  every file instead.
+- **The thresholds do not move.** Do not lower `minimum_coverage` and do not add a
+  SimpleCov filter to exclude a file. The only sanctioned escape hatch is a
+  `# simplecov:disable` directive.
+- **Every file under `lib/` is measured.** SimpleCov only tracks files loaded after it
+  starts, so a file loaded earlier is silently absent from the report rather than
+  counted as uncovered. This is why `git.gemspec` reads the version string out of
+  `lib/git/version.rb` instead of `require`ing it: the `Gemfile` uses `gemspec`, so
+  requiring it there would load it on every `bundle exec`, before SimpleCov starts.
+  Keep new code out of the load path that runs ahead of `spec_helper`.
+
+When a branch is hard to cover, apply these in order:
+
+1. **Reach it through the public interface.** If a branch is reachable, test it.
+2. **Delete it.** A branch that cannot be reached through the public interface is
+   usually dead code, and removing it is preferable to excluding it. See commit
+   `74e919a4` ("fix: remove unreachable nil check in `Git::Parsers::Grep.parse`") for
+   the pattern.
+3. **Exclude it with `# simplecov:disable`.** Reserved for defensive guards that could
+   only be reached by breaking an OS-level invariant. Cover the smallest possible span,
+   state why the code is unreachable, and expect a reviewer to question it. `lib/`
+   currently contains no coverage directives.
+
+   Use the inline form wherever the exclusion is a single line. It applies only to the
+   line it sits on and needs no matching `enable`, which makes it impossible to leave a
+   region accidentally open:
+
+   ```ruby
+   raise 'unreachable' # simplecov:disable defensive guard; only reachable on OOM
+   ```
+
+   The block form covers a span and stays in effect until the matching
+   `# simplecov:enable` (or end of file, if you forget it):
+
+   ```ruby
+   # simplecov:disable branch platform-specific fallback; not reachable on MRI
+   ...
+   # simplecov:enable branch
+   ```
+
+   Name the narrowest criterion that solves the problem and spell it exactly:
+   `line`, `branch`, `method`, or a comma-separated combination. A word SimpleCov
+   does not recognize is treated as free-form reason text, which silently widens the
+   directive to all three criteria instead of failing. Write the reason after the
+   criteria, so the required justification lives in the directive itself.
+
+**Coverage is a floor on evidence, not a proof of correctness.** A test written only
+to execute a line, without asserting a meaningful outcome, violates Rule 24 of the
+[`rspec-unit-testing-standards`](.github/skills/rspec-unit-testing-standards/SKILL.md)
+skill and will be rejected in review even though it turns the report green. The
+threshold exists to surface untested behavior, not to be satisfied.
+
+To see exactly what is uncovered:
+
+```bash
+# Names every uncovered line and branch (printed automatically when a full run fails)
+$ LIST_UNCOVERED_DETAIL=true bundle exec rake spec:unit
+
+# Browsable HTML report, also uploaded as a CI artifact when a build fails
+$ open coverage/index.html
+```
+
+This policy applies to `main` and `5.x`. The `4.x` maintenance branch predates it and
+is not held to these thresholds.
+
+#### Unit tests vs integration tests
+
+This project uses two types of RSpec tests, organized by directory:
+
+- **Unit tests** (`spec/unit/`): test individual classes and methods with mocked
+  execution context. These verify that the gem builds correct git command arguments
+  and properly handles git output. Unit tests should mock `@execution_context` to
+  avoid calling real git commands.
+
+- **Integration tests** (`spec/integration/`): test the gem's behavior against real
+  git repositories. These verify that mocked assumptions in unit tests match actual
+  git behavior. Integration tests create temporary repositories using `Dir.mktmpdir`
+  and run real git commands through the gem's public API.
+
+Integration tests validate that the gem correctly interacts with git, not that git
+itself works correctly. They should verify:
+
+- That the gem's mocked command expectations match real git output format
+- That the gem correctly handles real git behavior (e.g., unicode in branch names)
+- That command options produce expected git behavior
+- Edge cases that are difficult to mock reliably
+
+**Integration test guidelines**:
+
+- Keep tests minimal and purposeful; only create what's needed for the test
+- Focus on key behaviors that unit tests can't verify
+- Don't test git's functionality; test the gem's interaction with git
+- Use the shared context `'in an empty repository'` for temporary repo setup
+- Use `Git::IntegrationTestHelpers` methods for file operations
+- Each test should verify one specific git interaction pattern
+
+**Example**: An integration test for branch listing should verify that the gem
+correctly parses git's branch list format, not that git can create branches.
+
+While working on specific features, you can run tests using:
+
+```bash
+# Run all RSpec tests (unit + integration):
+$ bundle exec rake spec
+
+# Run only RSpec unit tests:
+$ bundle exec rake spec:unit
+
+# Run only RSpec integration tests:
+$ bundle exec rake spec:integration
+
+# Run a specific RSpec file:
+$ bundle exec rspec spec/unit/git/commands/add_spec.rb
+
+# Run tests with a different version of the git command line:
+$ GIT_PATH=/Users/james/Downloads/git-2.30.2/bin-wrappers bundle exec rake spec
+```
+
+### What ships in the gem
+
+`spec.files` in [`git.gemspec`](git.gemspec) is an **allowlist**: the released gem
+contains `lib/`, the documents [`.yardopts`](.yardopts) names as extra files, plus
+`UPGRADING.md` and the gemspec itself. Nothing else in the repository is published.
+
+It used to be a denylist, which meant every new path was published by default. That
+shipped `.github/`, `tasks/`, the Husky hooks, and the `.claude/skills` symlink to
+users. The symlink is what forced the change: extracting a symlink requires a
+privilege Windows grants only under Developer Mode or an elevated shell, so
+`gem install git` either failed there or, on RubyGems new enough to fall back to a
+copy, quietly duplicated the whole skills tree into the installed gem.
+
+What this means when you add a file:
+
+- **Under `lib/`**: nothing to do; it ships automatically.
+- **A new top-level document**: add it to `doc_files` in the gemspec if users should
+  get it, and to `.yardopts` if rubydoc.info should render it. The two lists are
+  checked against each other, so a file in `.yardopts` but not the gem fails the
+  suite rather than becoming a broken documentation link.
+- **Anything else**: it stays out of the gem, which is almost always what you want.
+
+[`spec/unit/gemspec_spec.rb`](spec/unit/gemspec_spec.rb) enforces all of this: every
+tracked file under `lib/` is present, no symlink is, and nothing outside `lib/` and
+the project root is.
+
+## Building a specific version of the Git command-line
+
+To test with a specific version of the Git command-line, you may need to build that
+version from source code. The following instructions are adapted from Atlassian's
+[How to install Git](https://www.atlassian.com/git/tutorials/install-git) page for
+building Git on macOS.
+
+### Install prerequisites
+
+Install prerequisites only if they are not already present.
+
+From your terminal, install Xcode's Command Line Tools:
+
+```shell
+xcode-select --install
+```
+
+Install [Homebrew](http://brew.sh/) by following the instructions on the Homebrew
+page.
+
+Using Homebrew, install OpenSSL:
+
+```shell
+brew install openssl
+```
+
+### Obtain Git source code
+
+Download and extract the source tarball for the desired Git version from [this source
+code mirror](https://mirrors.edge.kernel.org/pub/software/scm/git/).
+
+### Build git
+
+From your terminal, change to the root directory of the extracted source code and run
+the build with the following command:
+
+```shell
+NO_GETTEXT=1 make CFLAGS="-I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/opt/openssl/lib"
+```
+
+The build script will place the newly compiled Git executables in the `bin-wrappers`
+directory (e.g., `bin-wrappers/git`).
+
+### Use the new Git version
+
+To configure programs that use the Git gem to run the newly built version, do the
+following:
+
+```ruby
+require 'git'
+
+# Set the binary path
+Git.configure { |c| c.binary_path = '/Users/james/Downloads/git-2.30.2/bin-wrappers/git' }
+
+# Validate the version (if desired)
+assert_equal(Git::Version.new(2, 30, 2), Git.git_version)
+```
+
+Tests can be run using the newly built Git version as follows:
+
+```shell
+GIT_PATH=/Users/james/Downloads/git-2.30.2/bin-wrappers bundle exec rake spec
+```
+
+Note: `GIT_PATH` refers to the directory containing the `git` executable.

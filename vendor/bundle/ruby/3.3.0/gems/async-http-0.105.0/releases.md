@@ -1,0 +1,243 @@
+# Releases
+
+## v0.105.0
+
+  - Respond with `400 Bad Request` for any `Protocol::HTTP::BadRequest` raised while parsing HTTP/1 or HTTP/2 requests, include the exception class name without reflecting request data, and avoid reporting them as unhandled server errors.
+
+## v0.103.0
+
+  - Handle `RST_STREAM(NO_ERROR)` as an orderly HTTP/2 stream closure while still failing requests whose streams close before any response headers are received.
+
+## v0.102.0
+
+  - Requests assigned to an HTTP/2 connection which has already closed are refused before being written, allowing them to be retried safely.
+  - HTTP/2 connections which received a graceful `GOAWAY` are removed from availability immediately, but remain in the pool until the server has finished answering the streams it accepted. The connection is closed after its final user releases it, so those requests no longer fail with `EOFError: Connection closed with N active stream(s)!`.
+
+## v0.101.0
+
+  - Handle remote disconnects in `Async::HTTP::Protocol::HTTP1::Server#each` without reporting them as server failures.
+
+## v0.100.0
+
+  - Added transport-neutral TLS configuration support to `Async::HTTP::Endpoint`.
+
+## v0.99.0
+
+  - Retry safe requests when a remote HTTP/2 endpoint resets the stream with `INTERNAL_ERROR` before returning a response.
+
+## v0.98.1
+
+  - Probe idle HTTP/1 connections before reuse, avoiding requests on connections already closed by the peer.
+
+## v0.98.0
+
+  - Rewind request bodies before retrying requests.
+
+## v0.97.0
+
+  - Exposed all supported protocol names from the plaintext HTTP protocol negotiator.
+
+## v0.96.0
+
+  - Made `metrics` and `traces` optional runtime dependencies. Applications that use the providers should depend on the corresponding gem and require the provider explicitly.
+
+## v0.95.1
+
+  - Fix handling of reset stream causing complete connection failure.
+
+## v0.95.0
+
+  - Use `Protocol::HTTP::RefusedError` for safe retry of requests not processed by the server, including non-idempotent methods like PUT.
+      - Remove `Async::HTTP::Protocol::RequestFailed` in favour of `Protocol::HTTP::RefusedError`.
+      - HTTP/1: Delegate request write failure handling to `protocol-http1`.
+      - HTTP/2: Handle GOAWAY and REFUSED\_STREAM via `protocol-http2`, enabling automatic retry of unprocessed requests.
+
+## v0.94.3
+
+  - Fix response body leak in HTTP/2 server when stream is reset before `send_response` completes (e.g. client-side gRPC cancellation). The response body's `close` was never called, leaking any resources tied to body lifecycle (such as `rack.response_finished` callbacks and utilization metrics).
+
+## v0.94.1
+
+  - Fix `defer_stop` usage in `HTTP1::Server`, improving server graceful shutdown behavior.
+
+## v0.94.0
+
+  - Propagate all errors from background reader to active streams so that they are closed correctly (e.g. errors are not missed).
+
+## v0.92.2
+
+  - Better handling of trailers. If invalid trailers are received, the connection (HTTP/1) or stream (HTTP/2) is reset.
+
+## v0.92.0
+
+  - **Breaking**: Remove `Async::HTTP::Reference`. Use `Protocol::URL::Reference` directly instead.
+
+## v0.91.0
+
+  - Move all default trace providers into `traces/provider/async/http`.
+
+## v0.90.2
+
+  - Don't emit `resource:` keyword argument in traces - it's unsupported by OpenTelemetry.
+
+## v0.88.0
+
+### Support custom protocols with options
+
+{ruby Async::HTTP::Protocol} contains classes for specific protocols, e.g. {ruby Async::HTTP::Protocol::HTTP1} and {ruby Async::HTTP::Protocol::HTTP2}. It also contains classes for aggregating protocols, e.g. {ruby Async::HTTP::Protocol::HTTP} and {ruby Async::HTTP::Protocol::HTTPS}. They serve as factories for creating client and server instances.
+
+These classes are now configurable with various options, which are passed as keyword arguments to the relevant connection classes. For example, to configure an HTTP/1.1 protocol without keep-alive:
+
+``` ruby
+protocol = Async::HTTP::Protocol::HTTP1.new(persistent: false, maximum_line_length: 32)
+endpoint = Async::HTTP::Endpoint.parse("http://localhost:9292", protocol: protocol)
+server = Async::HTTP::Server.for(endpoint) do |request|
+	Protocol::HTTP::Response[200, {}, ["Hello, world"]]
+end.run
+```
+
+Making a request to the server will now close the connection after the response is received:
+
+    > curl -v http://localhost:9292
+    * Host localhost:9292 was resolved.
+    * IPv6: ::1
+    * IPv4: 127.0.0.1
+    *   Trying [::1]:9292...
+    * Connected to localhost (::1) port 9292
+    * using HTTP/1.x
+    > GET / HTTP/1.1
+    > Host: localhost:9292
+    > User-Agent: curl/8.12.1
+    > Accept: */*
+    > 
+    * Request completely sent off
+    < HTTP/1.1 200 OK
+    < connection: close
+    < content-length: 12
+    < 
+    * shutting down connection #0
+    Hello, world
+
+In addition, any line longer than 32 bytes will be rejected:
+
+    curl -v http://localhost:9292/012345678901234567890123456789012
+    * Host localhost:9292 was resolved.
+    * IPv6: ::1
+    * IPv4: 127.0.0.1
+    *   Trying [::1]:9292...
+    * Connected to localhost (::1) port 9292
+    * using HTTP/1.x
+    > GET /012345678901234567890123456789012 HTTP/1.1
+    > Host: localhost:9292
+    > User-Agent: curl/8.12.1
+    > Accept: */*
+    > 
+    * Request completely sent off
+    * Empty reply from server
+    * shutting down connection #0
+    curl: (52) Empty reply from server
+
+## v0.87.0
+
+### Unify HTTP/1 and HTTP/2 `CONNECT` semantics
+
+HTTP/1 has a request line "target" which takes different forms depending on the kind of request. For `CONNECT` requests, the target is the authority (host and port) of the target server, e.g.
+
+    CONNECT example.com:443 HTTP/1.1
+
+In HTTP/2, the `CONNECT` method uses the `:authority` pseudo-header to specify the target, e.g.
+
+``` http
+[HEADERS FRAME]
+:method: connect
+:authority: example.com:443
+```
+
+In HTTP/1, the `Request#path` attribute was previously used to store the target, and this was incorrectly mapped to the `:path` pseudo-header in HTTP/2. This has been corrected, and the `Request#authority` attribute is now used to store the target for both HTTP/1 and HTTP/2, and mapped accordingly. Thus, to make a `CONNECT` request, you should set the `Request#authority` attribute, e.g.
+
+``` ruby
+response = client.connect(authority: "example.com:443")
+```
+
+For HTTP/1, the authority is mapped back to the request line target, and for HTTP/2, it is mapped to the `:authority` pseudo-header.
+
+## v0.86.0
+
+  - Add support for HTTP/2 `NO_RFC7540_PRIORITIES`. See <https://www.rfc-editor.org/rfc/rfc9218.html> for more details.
+
+## v0.84.0
+
+  - Minor consistency fixes to `Async::HTTP::Internet` singleton methods.
+
+## v0.82.0
+
+  - `protocol-http1` introduces a line length limit for request line, response line, header lines and chunk length lines.
+
+## v0.81.0
+
+  - Expose `protocol` and `endpoint` as tags to `async-pool` for improved instrumentation.
+
+## v0.77.0
+
+  - Improved HTTP/1 connection handling.
+  - The input stream is no longer closed when the output stream is closed.
+
+## v0.76.0
+
+  - `Async::HTTP::Body::Writable` is moved to `Protocol::HTTP::Body::Writable`.
+  - Remove `Async::HTTP::Body::Delayed` with no replacement.
+  - Remove `Async::HTTP::Body::Slowloris` with no replacement.
+
+## v0.75.0
+
+  - Better handling of HTTP/1 \<-\> HTTP/2 proxying, specifically upgrade/CONNECT requests.
+
+## v0.74.0
+
+### `Async::HTTP::Internet` accepts keyword arguments
+
+`Async::HTTP::Internet` now accepts keyword arguments for making a request, e.g.
+
+``` ruby
+internet = Async::HTTP::Internet.instance
+
+# This will let you override the authority (HTTP/1.1 host header, HTTP/2 :authority header):
+internet.get("https://proxy.local", authority: "example.com")
+
+# This will let you override the scheme:
+internet.get("https://example.com", scheme: "http")
+```
+
+## v0.73.0
+
+### Update support for `interim_response`
+
+`Protocol::HTTP::Request` now supports an `interim_response` callback, which will be called with the interim response status and headers. This works on both the client and the server:
+
+``` ruby
+# Server side:
+def call(request)
+	if request.headers["expect"].include?("100-continue")
+		request.send_interim_response(100)
+	end
+	
+	# ...
+end
+
+# Client side:
+body = Async::HTTP::Body::Writable.new
+
+interim_repsonse = proc do |status, headers|
+	if status == 100
+		# Continue sending the body...
+		body.write("Hello, world!")
+		body.close
+	end
+end
+
+Async::HTTP::Internet.instance.post("https://example.com", body, interim_response: interim_response) do |response|
+	unless response.success?
+		body.close
+	end
+end
+```

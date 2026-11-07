@@ -1,0 +1,180 @@
+# frozen_string_literal: true
+
+# Released under the MIT License.
+# Copyright, 2025-2026, by Samuel Williams.
+
+require_relative "relative"
+
+module Protocol
+	module URL
+		# Represents an absolute URL with scheme and/or authority.
+		# Examples: "https://example.com/path", "//cdn.example.com/lib.js", "http://localhost/"
+		class Absolute < Relative
+			# Initialize a new absolute URL.
+			#
+			# @parameter scheme [String] The URL scheme (e.g., "https", "http").
+			# @parameter authority [String] The authority component (e.g., "example.com", "user@host:port").
+			# @parameter path [String | Path] The encoded path component (defaults to "/").
+			# @parameter query [String | Nil] The query string.
+			# @parameter fragment [String | Nil] The fragment identifier.
+			def initialize(scheme, authority, path = "/", query = nil, fragment = nil)
+				@scheme = scheme
+				@authority = authority
+				
+				# Initialize the parent Relative class with the path component
+				super(path, query, fragment)
+			end
+			
+			# Freeze the URL and its direct components.
+			# @returns [Absolute] The frozen URL.
+			def freeze
+				return self if frozen?
+				
+				@scheme.freeze
+				@authority.freeze
+				
+				return super
+			end
+			
+			# @attribute [String | Nil] The URL scheme.
+			attr_accessor :scheme
+			
+			# @attribute [String | Nil] The authority component.
+			attr_accessor :authority
+			
+			# Check if the URL has a non-empty scheme.
+			#
+			# @returns [Boolean] True if a scheme is present and non-empty.
+			def scheme?
+				@scheme and !@scheme.empty?
+			end
+			
+			# Check if the URL has a non-empty authority.
+			#
+			# @returns [Boolean] True if an authority is present and non-empty.
+			def authority?
+				@authority and !@authority.empty?
+			end
+			
+			# Combine this absolute URL with a relative reference according to RFC 3986 Section 5.
+			#
+			# @parameter other [String, Relative, Reference, Absolute] The reference to resolve.
+			# @returns [Absolute, String] The resolved absolute URL.
+			#
+			# @example Resolve a relative path.
+			# 	base = Absolute.new("https", "example.com", "/documents/reports/")
+			# 	relative = Relative.new("summary.pdf")
+			# 	result = base + relative
+			# 	result.to_s  # => "https://example.com/documents/reports/summary.pdf"
+			#
+			# @example Navigate to parent directory.
+			# 	base = Absolute.new("https", "example.com", "/documents/reports/2024/")
+			# 	relative = Relative.new("../../archive/")
+			# 	result = base + relative
+			# 	result.to_s  # => "https://example.com/documents/archive/"
+			def +(other)
+				case other
+				when Absolute
+					# If other is already absolute with a scheme, return it as-is:
+					return other if other.scheme
+					# Protocol-relative URL: inherit scheme from base:
+					return Absolute.new(@scheme, other.authority, other.path, other.query, other.fragment)
+				when Relative
+					# Already a Relative, use directly.
+				when String
+					other = URL[other]
+					# If parsing resulted in an Absolute URL, handle it:
+					if other.is_a?(Absolute)
+						return other if other.scheme
+						# Protocol-relative URL: inherit scheme from base:
+						return Absolute.new(@scheme, other.authority, other.path, other.query, other.fragment)
+					end
+				else
+					raise ArgumentError, "Cannot combine Absolute URL with #{other.class}"
+				end
+				
+				# RFC 3986 Section 5.3: Component Recomposition
+				# At this point, other is a Relative URL
+				
+				# Check for special cases first:
+				if other.path.empty?
+					# Empty path - could be query-only or fragment-only reference:
+					if other.query
+						# Query replacement: use base path with new query:
+						Absolute.new(@scheme, @authority, @path, other.query, other.fragment)
+					else
+						# Fragment-only: keep everything from base, just change fragment:
+						Absolute.new(@scheme, @authority, @path, @query, other.fragment || @fragment)
+					end
+				else
+					# Relative path: merge with base path:
+					path = @path.join(other.path)
+					Absolute.new(@scheme, @authority, path, other.query, other.fragment)
+				end
+			end
+			
+			# Append the absolute URL to the given buffer.
+			# @parameter explicit [Boolean] Ignored because absolute URLs are already lexically identifiable.
+			def append(buffer = String.new, explicit: false)
+				buffer << @scheme << ":" if @scheme
+				buffer << "//" << @authority if @authority
+				super(buffer)
+			end
+			
+			# Create a new Absolute URL with modified components.
+			#
+			# @parameter scheme [String | Nil] The scheme to use (nil to remove scheme).
+			# @parameter authority [String | Nil] The authority to use (nil to remove authority).
+			# @parameter path [String | Nil] The path to merge with the current path.
+			# @parameter query [String | Nil] The query string to use.
+			# @parameter fragment [String | Nil] The fragment to use.
+			# @parameter pop [Boolean] Whether to pop the last path component before merging.
+			# @returns [Absolute] A new Absolute URL with the modified components.
+			#
+			# @example Change the scheme.
+			# 	url = Absolute.new("http", "example.com", "/page")
+			# 	secure = url.with(scheme: "https")
+			# 	secure.to_s  # => "https://example.com/page"
+			#
+			# @example Update the query string.
+			# 	url = Absolute.new("https", "example.com", "/search", "query=ruby")
+			# 	updated = url.with(query: "query=python")
+			# 	updated.to_s  # => "https://example.com/search?query=python"
+			def with(scheme: @scheme, authority: @authority, path: nil, query: @query, fragment: @fragment, pop: true)
+				path = @path.join(path, pop: pop) unless path.nil?
+				
+				self.class.new(scheme, authority, path || @path, query, fragment)
+			end
+			
+			# Absolute URLs cannot be made relative without comparing their origins.
+			# @parameter base [Object] The ignored base URL or path.
+			# @returns [self] This absolute URL.
+			def relative_to(base)
+				return self
+			end
+			
+			# Convert the URL to an array representation.
+			#
+			# @returns [Array] An array of `[scheme, authority, path, query, fragment]`.
+			def to_ary
+				[@scheme, @authority, @path, @query, @fragment]
+			end
+			
+			# Compare this URL with another for sorting purposes.
+			#
+			# @parameter other [Absolute] The URL to compare with.
+			# @returns [Integer] -1, 0, or 1 based on component-wise comparison.
+			def <=>(other)
+				to_ary <=> other.to_ary
+			end
+			
+			# Convert the URL to its string representation.
+			#
+			# @parameter explicit [Boolean] Ignored because absolute URLs are already lexically identifiable.
+			# @returns [String] The formatted absolute URL string.
+			def to_s(explicit: false)
+				append(explicit: explicit)
+			end
+		end
+	end
+end

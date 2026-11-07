@@ -1,0 +1,64 @@
+# frozen_string_literal: true
+
+require 'git/commands/base'
+
+module Git
+  module Commands
+    module Worktree
+      # Lists all worktrees attached to the repository
+      #
+      # @example List all worktrees in porcelain format
+      #   Git::Commands::Worktree::List.new(execution_context).call(porcelain: true)
+      #
+      # @note `arguments` block audited against
+      #   https://git-scm.com/docs/git-worktree/2.54.0
+      #
+      # @see Git::Commands::Worktree Git::Commands::Worktree for the full sub-command list
+      #
+      # @see https://git-scm.com/docs/git-worktree git-worktree documentation
+      #
+      # @api private
+      #
+      class List < Git::Commands::Base
+        arguments do
+          literal 'worktree'
+          literal 'list'
+          flag_option :porcelain
+          flag_option :z
+          flag_option %i[verbose v]
+          value_option :expire
+        end
+
+        # @overload call(**options)
+        #
+        #   List all worktrees attached to the repository
+        #
+        #   @param options [Hash] command options
+        #
+        #   @option options [Boolean, nil] :porcelain (nil) produce machine-readable
+        #     output
+        #
+        #   @option options [Boolean, nil] :z (nil) terminate output lines with NUL
+        #     bytes (use with `:porcelain`)
+        #
+        #   @option options [Boolean, nil] :verbose (nil) output additional information
+        #     about worktrees
+        #
+        #     Alias: :v
+        #
+        #   @option options [String] :expire (nil) annotate missing worktrees as
+        #     prunable if older than this time expression
+        #
+        #   @return [Git::CommandLine::Result] the result of calling `git worktree list`
+        #
+        # @raise [ArgumentError] if unsupported options are provided
+        #
+        # @raise [Git::FailedError] if git exits with a non-zero exit status
+        #
+        # @api public
+        #
+        def call(...) = super # rubocop:disable Lint/UselessMethodDefinition
+      end
+    end
+  end
+end

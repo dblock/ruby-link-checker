@@ -1,0 +1,72 @@
+# frozen_string_literal: true
+
+require 'git/commands/base'
+
+module Git
+  module Commands
+    module Stash
+      # Store a commit in the stash reflog
+      #
+      # This is a plumbing command used to store a given stash commit (created
+      # by `git stash create`) in the stash reflog, updating refs/stash.
+      #
+      # This command is typically used after {Create} to actually record
+      # the stash in the reflog.
+      #
+      # @example Store a stash commit
+      #   Git::Commands::Stash::Store.new(execution_context).call('abc123def456')
+      #
+      # @example Store with a custom message
+      #   Git::Commands::Stash::Store.new(execution_context).call('abc123def456', message: 'WIP: feature')
+      #
+      # @note `arguments` block audited against https://git-scm.com/docs/git-stash/2.53.0
+      #
+      # @see Git::Commands::Stash Git::Commands::Stash for usage examples
+      #
+      # @see https://git-scm.com/docs/git-stash git-stash documentation
+      #
+      # @api private
+      #
+      class Store < Git::Commands::Base
+        arguments do
+          literal 'stash'
+          literal 'store'
+          value_option %i[message m]
+          flag_option %i[quiet q]
+          operand :commit, required: true
+        end
+
+        # @!method call(*, **options)
+        #
+        #   @param options [Hash] command options
+        #
+        #   @option options [String] :message (nil) command option key; see overload docs for
+        #     the full option list
+        #
+        #   @overload call(commit, **options)
+        #
+        #     Store a commit in the stash reflog
+        #
+        #     @param commit [String] the commit SHA to store in the stash (required)
+        #
+        #     @param options [Hash] command options
+        #
+        #     @option options [String] :message (nil) description for the reflog entry
+        #
+        #       Alias: :m
+        #
+        #     @option options [Boolean, nil] :quiet (nil) suppress output
+        #
+        #       Alias: :q
+        #
+        #     @return [Git::CommandLine::Result] the result of calling `git stash store`
+        #
+        #   @raise [ArgumentError] if unsupported options are provided
+        #
+        #   @raise [Git::FailedError] if git exits with a non-zero exit status
+        #
+        #   @api public
+      end
+    end
+  end
+end

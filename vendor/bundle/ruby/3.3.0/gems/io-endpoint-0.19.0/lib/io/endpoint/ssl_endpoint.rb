@@ -1,0 +1,198 @@
+# frozen_string_literal: true
+
+# Released under the MIT License.
+# Copyright, 2023-2026, by Samuel Williams.
+
+require_relative "host_endpoint"
+require_relative "generic"
+require_relative "tls/openssl"
+
+require "openssl"
+
+# @namespace
+module OpenSSL
+	# @namespace
+	module SSL
+		# Represents an SSL socket with additional methods for compatibility.
+		class SSLSocket
+			unless method_defined?(:start)
+				# Start the SSL handshake (alias for accept).
+				def start
+					self.accept
+				end
+			end
+		end
+		
+	end
+end
+
+module IO::Endpoint
+	# Represents an SSL/TLS endpoint that wraps another endpoint.
+	class SSLEndpoint < Generic
+		# Initialize a new SSL endpoint.
+		# @parameter endpoint [Generic] The underlying endpoint to wrap with SSL.
+		# @option ssl_context [OpenSSL::SSL::SSLContext, nil] An optional SSL context to use.
+		# @option tls_configuration [TLS::Configuration, nil] Transport-neutral TLS certificate and verification configuration.
+		# @parameter options [Hash] Additional options including `:ssl_params` and `:hostname`.
+		def initialize(endpoint, **options)
+			super(**options)
+			
+			@endpoint = endpoint
+			
+			if ssl_context = options[:ssl_context]
+				@context = build_context(ssl_context)
+			else
+				@context = nil
+			end
+		end
+		
+		# Get a string representation of the SSL endpoint.
+		# @returns [String] A string representation showing the underlying endpoint.
+		def to_s
+			"ssl:#{@endpoint}"
+		end
+		
+		# Get a detailed string representation of the SSL endpoint.
+		# @returns [String] A detailed string representation including the underlying endpoint.
+		def inspect
+			"\#<#{self.class} endpoint=#{@endpoint.inspect}>"
+		end
+		
+		# Get the address from the underlying endpoint.
+		# @returns [Address, nil] The address from the underlying endpoint.
+		def address
+			@endpoint.address
+		end
+		
+		# Get the hostname for SSL verification.
+		# @returns [String, nil] The hostname from options or the underlying endpoint.
+		def hostname
+			@options[:hostname] || @endpoint.hostname
+		end
+		
+		# @attribute [Generic] The underlying endpoint.
+		attr :endpoint
+		# @attribute [Hash] The options hash.
+		attr :options
+		
+		# Get SSL parameters from options.
+		# @returns [Hash, nil] SSL parameters if specified in options.
+		def params
+			@options[:ssl_params]
+		end
+		
+		# Get the transport-neutral TLS configuration from options.
+		# @returns [TLS::Configuration, nil] The TLS configuration if specified.
+		def tls_configuration
+			@options[:tls_configuration]
+		end
+		
+		# Build an SSL context with configured parameters.
+		# @parameter context [OpenSSL::SSL::SSLContext] An optional SSL context to configure.
+		# @returns [OpenSSL::SSL::SSLContext] The configured SSL context.
+		def build_context(context = ::OpenSSL::SSL::SSLContext.new)
+			if params = self.params
+				context.set_params(params)
+			end
+			
+			if tls_configuration = self.tls_configuration
+				TLS::OpenSSL.apply(context, tls_configuration, hostname: self.hostname)
+			end
+			
+			# context.setup
+			# context.freeze
+			
+			return context
+		end
+		
+		# Get or build the SSL context.
+		# @returns [OpenSSL::SSL::SSLContext] The SSL context.
+		def context
+			@context ||= build_context
+		end
+		
+		# Create an SSL server socket from an IO object.
+		# @parameter io [IO] The underlying IO object.
+		# @returns [OpenSSL::SSL::SSLServer] A new SSL server socket.
+		def make_server(io)
+			::OpenSSL::SSL::SSLServer.new(io, self.context).tap do |server|
+				server.start_immediately = false
+			end
+		end
+		
+		# Create an SSL client socket from an IO object.
+		# @parameter io [IO] The underlying IO object.
+		# @returns [OpenSSL::SSL::SSLSocket] A new SSL client socket.
+		def make_socket(io)
+			::OpenSSL::SSL::SSLSocket.new(io, self.context).tap do |socket|
+				# We consider the underlying IO is owned by the SSL socket:
+				socket.sync_close = true
+			end
+		end
+		
+		# Connect to the underlying endpoint and establish a SSL connection.
+		# @yields {|socket| ...} If a block is given, yields the SSL server socket.
+		# 	@parameter socket [Socket] The SSL server socket.
+		# @returns [Socket] the connected socket
+		def bind(*arguments, **options, &block)
+			if block_given?
+				@endpoint.bind(*arguments, **options) do |server|
+					yield self.make_server(server)
+				end
+			else
+				@endpoint.bind(*arguments, **options).map do |server|
+					self.make_server(server)
+				end
+			end
+		end
+		
+		# Connect to the underlying endpoint and establish a SSL connection.
+		# @yields {|socket| ...} If a block is given, yields the connected SSL socket.
+		# 	@parameter socket [Socket] The connected SSL socket.
+		# @returns [Socket] the connected socket
+		def connect(&block)
+			socket = self.make_socket(@endpoint.connect)
+			
+			if hostname = self.hostname
+				socket.hostname = hostname
+			end
+			
+			begin
+				socket.connect
+			rescue
+				socket.close
+				raise
+			end
+			
+			return socket unless block_given?
+			
+			begin
+				yield socket
+			ensure
+				socket.close
+			end
+		end
+		
+		# Enumerate all endpoints by wrapping each underlying endpoint with SSL.
+		# @yields {|endpoint| ...} For each underlying endpoint, yields an SSL-wrapped endpoint.
+		# 	@parameter endpoint [SSLEndpoint] An SSL endpoint.
+		def each
+			return to_enum unless block_given?
+			
+			@endpoint.each do |endpoint|
+				yield self.class.new(endpoint, **@options)
+			end
+		end
+	end
+	
+	# @parameter arguments
+	# @parameter ssl_context [OpenSSL::SSL::SSLContext, nil]
+	# @parameter tls_configuration [TLS::Configuration, nil]
+	# @parameter hostname [String, nil]
+	# @parameter options keyword arguments passed through to {Endpoint.tcp}
+	#
+	# @returns [SSLEndpoint]
+	def self.ssl(*arguments, ssl_context: nil, tls_configuration: nil, hostname: nil, **options)
+		SSLEndpoint.new(self.tcp(*arguments, **options), ssl_context: ssl_context, tls_configuration: tls_configuration, hostname: hostname)
+	end
+end

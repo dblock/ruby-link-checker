@@ -1,0 +1,45 @@
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/io-event-1.22.3/ext
+/opt/hostedtoolcache/Ruby/3.3.13/x64/bin/ruby extconf.rb
+checking for whether -Wall is accepted as CFLAGS... yes
+checking for whether -Wno-unknown-pragmas is accepted as CFLAGS... yes
+checking for whether -std=c99 is accepted as CFLAGS... yes
+checking for rb_ext_ractor_safe()... yes
+checking for &rb_fiber_transfer()... yes
+checking for ruby/io/buffer.h... yes
+checking for linux/futex.h... yes
+checking for sys/syscall.h... yes
+checking for -luring... no
+checking for sys/epoll.h... yes
+checking for sys/event.h... no
+checking for sys/wait.h... yes
+checking for sys/eventfd.h... yes
+checking for rb_io_descriptor()... yes
+checking for rb_process_status_for()... no
+checking for &rb_process_status_wait()... yes
+checking for rb_fiber_current()... yes
+checking for &rb_fiber_raise()... yes
+checking for epoll_pwait2(0, 0, 0, 0, 0) in sys/epoll.h... yes
+checking for rb_fiber_scheduler_blocking_operation_extract()... no
+creating extconf.h
+creating Makefile
+
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/io-event-1.22.3/ext
+make DESTDIR\= sitearchdir\=./.gem.20261107-2444-2zz7bv sitelibdir\=./.gem.20261107-2444-2zz7bv clean
+
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/io-event-1.22.3/ext
+make DESTDIR\= sitearchdir\=./.gem.20261107-2444-2zz7bv sitelibdir\=./.gem.20261107-2444-2zz7bv
+compiling ./io/event/event.c
+compiling ./io/event/time.c
+compiling ./io/event/fiber.c
+compiling ./io/event/selector/selector.c
+compiling ./io/event/futex.c
+compiling ./io/event/selector/epoll.c
+compiling ./io/event/interrupt.c
+linking shared-object IO_Event.so
+
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/io-event-1.22.3/ext
+make DESTDIR\= sitearchdir\=./.gem.20261107-2444-2zz7bv sitelibdir\=./.gem.20261107-2444-2zz7bv install
+/usr/bin/install -c -m 0755 IO_Event.so ./.gem.20261107-2444-2zz7bv
+
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/io-event-1.22.3/ext
+make DESTDIR\= sitearchdir\=./.gem.20261107-2444-2zz7bv sitelibdir\=./.gem.20261107-2444-2zz7bv clean

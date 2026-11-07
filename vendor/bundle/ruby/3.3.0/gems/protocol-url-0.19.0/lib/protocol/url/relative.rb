@@ -1,0 +1,282 @@
+# frozen_string_literal: true
+
+# Released under the MIT License.
+# Copyright, 2025-2026, by Samuel Williams.
+
+require_relative "encoding"
+require_relative "path"
+
+module Protocol
+	module URL
+		# Represents a relative URL, which does not include a scheme or authority.
+		class Relative
+			include Comparable
+			
+			# Initialize a new relative URL.
+			#
+			# @parameter path [String | Path] The encoded path component.
+			# @parameter query [String | Nil] The query string.
+			# @parameter fragment [String | Nil] The fragment identifier.
+			def initialize(path, query = nil, fragment = nil)
+				@path = Path[path]
+				@query = query
+				@fragment = fragment
+			end
+			
+			# Freeze the URL and its direct components.
+			# @returns [Relative] The frozen URL.
+			def freeze
+				return self if frozen?
+				
+				@path.freeze
+				@query.freeze
+				@fragment.freeze
+				
+				return super
+			end
+			
+			# @attribute [Path] The path component of the URL.
+			attr :path
+			
+			# Replace the path component of this URL.
+			# @parameter path [String | Path] The encoded path component.
+			# @returns [Path] The assigned path component.
+			def path=(path)
+				@path = Path[path]
+			end
+			
+			# @attribute [String | Nil] The query string component.
+			attr_accessor :query
+			
+			# @attribute [String | Nil] The fragment identifier.
+			attr_accessor :fragment
+			
+			# Resolve the URL path beneath a local filesystem root.
+			#
+			# @parameter root [String] The filesystem root beneath which to resolve the URL path.
+			# @returns [String] The expanded local filesystem path.
+			# @raises [ArgumentError] If a URL segment is invalid or the path escapes the specified root.
+			def local_path(root)
+				@path.local_path(root)
+			end
+			
+			alias to_local_path local_path
+			
+			# @returns [Boolean] If there is a query string.
+			def query?
+				@query and !@query.empty?
+			end
+			
+			# @returns [Boolean] If there is a fragment.
+			def fragment?
+				@fragment and !@fragment.empty?
+			end
+			
+			# Combine this relative URL with another URL or path.
+			#
+			# @parameter other [String, Absolute, Relative] The URL or path to combine.
+			# @returns [Absolute, Relative] The combined URL.
+			#
+			# @example Combine two relative paths.
+			# 	base = Relative.new("/documents/reports/")
+			# 	other = Relative.new("invoices/2024.pdf")
+			# 	result = base + other
+			# 	result.path.to_s  # => "/documents/reports/invoices/2024.pdf"
+			#
+			# @example Navigate to parent directory.
+			# 	base = Relative.new("/documents/reports/archive/")
+			# 	other = Relative.new("../../summary.pdf")
+			# 	result = base + other
+			# 	result.path.to_s  # => "/documents/summary.pdf"
+			def +(other)
+				case other
+				when Absolute
+					# Relative + Absolute: the absolute URL takes precedence
+					# You can't apply relative navigation to an absolute URL
+					other
+				when Relative
+					# Relative + Relative: merge paths directly
+					self.class.new(
+						@path.join(other.path),
+						other.query,
+						other.fragment
+					)
+				when String
+					# Relative + String: parse and combine
+					self + URL[other]
+				else
+					raise ArgumentError, "Cannot combine Relative URL with #{other.class}"
+				end
+			end
+			
+			# Create a new Relative URL with modified components.
+			#
+			# @parameter path [String | Nil] The path to merge with the current path.
+			# @parameter query [String | Nil] The query string to use.
+			# @parameter fragment [String | Nil] The fragment to use.
+			# @parameter pop [Boolean] Whether to pop the last path component before merging.
+			# @returns [Relative] A new Relative URL with the modified components.
+			#
+			# @example Update the query string.
+			# 	url = Relative.new("/search", "query=ruby")
+			# 	updated = url.with(query: "query=python")
+			# 	updated.to_s  # => "/search?query=python"
+			#
+			# @example Append to the path.
+			# 	url = Relative.new("/documents/")
+			# 	updated = url.with(path: "report.pdf", pop: false)
+			# 	updated.to_s  # => "/documents/report.pdf"
+			def with(path: nil, query: @query, fragment: @fragment, pop: true)
+				path = @path.join(path, pop: pop) unless path.nil?
+				
+				self.class.new(path || @path, query, fragment)
+			end
+			
+			# Express this URL relative to the given base path.
+			#
+			# Already-relative paths are returned unchanged. Query and fragment components
+			# are preserved when converting a root-relative path.
+			#
+			# @parameter base [Relative | Path | String] The base URL or path.
+			# @returns [Relative] The relative URL.
+			def relative_to(base)
+				return self unless @path.absolute?
+				
+				if base.is_a?(Relative)
+					base = base.path
+				end
+				
+				return self.class.new(@path.relative(base), @query, @fragment)
+			end
+			
+			# Normalize the encoded path and simplify its structure.
+			#
+			# This modifies the URL in-place by normalizing and simplifying the path component:
+			# - Decodes percent-encoded unreserved characters
+			# - Uses uppercase hexadecimal digits for retained percent escapes
+			# - Removes "." segments (current directory)
+			# - Resolves ".." segments (parent directory)
+			# - Collapses empty path segments represented by consecutive slashes
+			#
+			# Normalization is intentionally lossy. Callers that need to preserve the
+			# original path structure should retain the parsed URL and avoid this method.
+			#
+			# @returns [self] The normalized URL.
+			#
+			# @example Basic normalization
+			#   url = Relative.new("/foo//bar/./baz/../qux")
+			#   url.normalize!
+			#   url.path.to_s  # => "/foo/bar/qux"
+			def normalize!
+				@path = @path.normalize.simplify
+				
+				return self
+			end
+			
+			# Append the relative URL to the given buffer.
+			# The path, query, and fragment are expected to already be properly encoded.
+			# @parameter explicit [Boolean] Whether the result should be lexically identifiable as a URL in a mixed grammar.
+			def append(buffer = String.new, explicit: false)
+				append_path(buffer, explicit: explicit)
+				
+				if @query and !@query.empty?
+					buffer << "?" << @query
+				end
+				
+				if @fragment and !@fragment.empty?
+					buffer << "#" << @fragment
+				end
+				
+				return buffer
+			end
+			
+			# Convert the URL to an array representation.
+			#
+			# @returns [Array] An array of `[path, query, fragment]`.
+			def to_ary
+				[@path, @query, @fragment]
+			end
+			
+			# Compute a hash value for the URL based on its components.
+			#
+			# @returns [Integer] The hash value.
+			def hash
+				to_ary.hash
+			end
+			
+			# Check if this URL is equal to another URL by comparing components.
+			#
+			# @parameter other [Relative] The URL to compare with.
+			# @returns [Boolean] True if the URLs have identical components.
+			def equal?(other)
+				to_ary == other.to_ary
+			end
+			
+			# Compare this URL with another for sorting purposes.
+			#
+			# @parameter other [Relative] The URL to compare with.
+			# @returns [Integer] -1, 0, or 1 based on component-wise comparison.
+			def <=>(other)
+				to_ary <=> other.to_ary
+			end
+			
+			# Check structural equality by comparing components.
+			#
+			# @parameter other [Relative] The URL to compare with.
+			# @returns [Boolean] True if the URLs have identical components.
+			def ==(other)
+				to_ary == other.to_ary
+			end
+			
+			# Check string equality, useful for case statements.
+			#
+			# @parameter other [String, Relative] The value to compare with.
+			# @returns [Boolean] True if the string representations match.
+			def ===(other)
+				to_s === other
+			end
+			
+			# Convert the URL to its string representation.
+			# When explicit, same-directory references start with `./` so they can be
+			# distinguished from non-URL values in a mixed grammar.
+			#
+			# @parameter explicit [Boolean] Whether the result should be lexically identifiable as a URL in a mixed grammar.
+			# @returns [String] The formatted URL string.
+			def to_s(explicit: false)
+				append(explicit: explicit)
+			end
+			
+			# Convert the URL to a JSON-compatible representation.
+			#
+			# @returns [String] The URL as a string.
+			def as_json(...)
+				to_s
+			end
+			
+			# Convert the URL to JSON.
+			#
+			# @returns [String] The JSON-encoded URL.
+			def to_json(...)
+				as_json.to_json(...)
+			end
+			
+			# Generate a human-readable representation for debugging.
+			#
+			# @returns [String] A string like `#<Protocol::URL::Relative /path?query#fragment>`.
+			def inspect
+				"#<#{self.class} #{to_s}>"
+			end
+			
+			# Append the path, optionally identifying a relative URL explicitly.
+			private def append_path(buffer, explicit: false)
+				if explicit && @path.relative?
+					path = @path.encoded
+					buffer << "./" unless path.start_with?("./", "../")
+				end
+				
+				buffer << @path.encoded
+			end
+			
+		end
+	end
+end

@@ -1,0 +1,52 @@
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/prism-1.9.0/ext/prism
+/opt/hostedtoolcache/Ruby/3.3.13/x64/bin/ruby extconf.rb
+checking for prism.h in /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/prism-1.9.0/include... yes
+checking for prism/extension.h in /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/prism-1.9.0/ext... yes
+checking for whether -fvisibility=hidden is accepted as CFLAGS... yes
+creating Makefile
+
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/prism-1.9.0/ext/prism
+make DESTDIR\= sitearchdir\=./.gem.20261107-2444-kabi6m sitelibdir\=./.gem.20261107-2444-kabi6m clean
+
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/prism-1.9.0/ext/prism
+make DESTDIR\= sitearchdir\=./.gem.20261107-2444-kabi6m sitelibdir\=./.gem.20261107-2444-kabi6m
+compiling api_node.c
+compiling api_pack.c
+compiling extension.c
+compiling ./../../src/diagnostic.c
+compiling ./../../src/encoding.c
+compiling ./../../src/node.c
+compiling ./../../src/options.c
+compiling ./../../src/pack.c
+compiling ./../../src/prettyprint.c
+compiling ./../../src/prism.c
+compiling ./../../src/regexp.c
+compiling ./../../src/serialize.c
+compiling ./../../src/static_literals.c
+compiling ./../../src/token_type.c
+compiling ./../../src/util/pm_buffer.c
+compiling ./../../src/util/pm_char.c
+compiling ./../../src/util/pm_constant_pool.c
+compiling ./../../src/util/pm_integer.c
+compiling ./../../src/util/pm_list.c
+compiling ./../../src/util/pm_memchr.c
+./../../src/util/pm_memchr.c: In function ‘pm_memchr’:
+./../../src/util/pm_memchr.c:31:16: warning: return discards ‘const’ qualifier from pointer target type [-Wdiscarded-qualifiers]
+   31 |         return memchr(memory, character, number);
+      |                ^~~~~~
+At top level:
+cc1: note: unrecognized command-line option ‘-Wno-self-assign’ may have been intended to silence earlier diagnostics
+cc1: note: unrecognized command-line option ‘-Wno-parentheses-equality’ may have been intended to silence earlier diagnostics
+cc1: note: unrecognized command-line option ‘-Wno-constant-logical-operand’ may have been intended to silence earlier diagnostics
+compiling ./../../src/util/pm_newline_list.c
+compiling ./../../src/util/pm_string.c
+compiling ./../../src/util/pm_strncasecmp.c
+compiling ./../../src/util/pm_strpbrk.c
+linking shared-object prism/prism.so
+
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/prism-1.9.0/ext/prism
+make DESTDIR\= sitearchdir\=./.gem.20261107-2444-kabi6m sitelibdir\=./.gem.20261107-2444-kabi6m install
+/usr/bin/install -c -m 0755 prism.so ./.gem.20261107-2444-kabi6m/prism
+
+current directory: /home/runner/work/ruby-link-checker/ruby-link-checker/vendor/bundle/ruby/3.3.0/gems/prism-1.9.0/ext/prism
+make DESTDIR\= sitearchdir\=./.gem.20261107-2444-kabi6m sitelibdir\=./.gem.20261107-2444-kabi6m clean

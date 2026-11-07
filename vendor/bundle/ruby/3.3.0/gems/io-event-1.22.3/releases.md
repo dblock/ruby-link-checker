@@ -1,0 +1,190 @@
+# Releases
+
+## v1.22.3
+
+  - Sign releases with the shared Socketry certificate.
+
+## v1.22.2
+
+  - Prevent nested worker-pool waits by running `WorkerPool#call` in a `Fiber.blocking` scope. Blocking operations triggered inside scheduler callbacks, including finalizers, execute synchronously. Cancellation still drains submitted work, and spurious wakeups no longer cancel operations.
+  - Add `IO::Event::Futex` on Linux with Ruby 4.1+, including atomic value operations and blocking and scheduler-aware single and vector waits over shared memory. Futexes retain a counted allocation lock until explicitly closed or finalized; pending waits prevent closing until completion or cancellation has finished.
+
+## v1.22.1
+
+  - Fix an infinite loop in the ready queue flush when a queued fiber is resumed out of band, e.g. by a stale `unblock` racing a timeout, while another fiber re-queues itself on every iteration.
+  - Preserve each ready queue flush's boundary with its own placeholder so newly queued fibers are deferred even when earlier entries are removed. Nested native flushes skip other placeholders, processing work queued before their own boundary. Native selectors ignore placeholders when checking readiness and remove them if a fiber raises.
+
+## v1.22.0
+
+  - Reject non-finite timer times (`NaN` and positive or negative infinity), preventing invalid heap ordering and permanently retained timer handles.
+
+## v1.21.1
+
+  - Fix the `URing` completion free-list empty check so its sole entry can be reused instead of unnecessarily allocating a new completion.
+  - Keep cancelled `URing` completion records allocated until both the operation and cancellation completions have been processed.
+
+## v1.20.0
+
+  - Add compatibility with Ruby 4.1's fiber scheduler interface version 4. Buffered IO operations now use `(offset, length)`, perform a single transfer of at most `length` bytes, return short transfers directly, and report `-EAGAIN` without waiting. Earlier Ruby versions retain the existing minimum-progress behavior.
+
+## v1.19.5
+
+  - Preserve the original exception or non-local control flow when `IO::Event::WorkerPool` cancellation interrupts a blocked fiber, while still cancelling and draining the in-flight blocking operation before returning control to Ruby.
+
+## v1.19.4
+
+  - Capture `errno` immediately after `epoll_wait` / `kevent`, preventing stale or subsequently clobbered values from raising a spurious `Errno::*` when a native selector wait is interrupted or skipped.
+
+## v1.19.3
+
+  - Prevent `URing`, `EPoll`, and `KQueue` from entering a native wait when a signal exception becomes pending during the GVL transition. On Ruby versions without `RB_NOGVL_PENDING_INTR_FAIL`, the fallback now refreshes pending-interrupt state immediately before releasing the GVL while preserving the caller's exception-delivery timing.
+
+## v1.19.2
+
+  - Use `rb_process_status_for` when available to construct `URing` `process_wait` results directly from `waitid`, avoiding the extra reap syscall previously needed to build a `Process::Status`.
+
+## v1.19.1
+
+  - Fix `Process.waitall` / `Process.detach` under the `URing` selector: when `io_uring`'s `waitid` reported an error (e.g. `ECHILD` when there are no more children), the `process_wait` hook raised instead of returning the error as a `Process::Status`, so callers that expect `waitpid` to *report* "no more children" rather than raise would fail.
+
+## v1.19.0
+
+  - Use `io_uring_prep_waitid` for `process_wait` in the `URing` selector (Linux 6.7+), waiting for child exit directly in the ring instead of polling on a `pidfd`. The child is reaped via `rb_process_status_wait` (using `WEXITED | WNOWAIT`) to construct a correct `Process::Status`, and `process_wait(-1, ...)` / `process_wait(0, ...)` are now supported.
+  - Support waiting for any child or a process group (`pid <= 0`) on all selectors. The `EPoll` (`pidfd_open`) and `KQueue` (`EVFILT_PROC`) selectors can only watch a specific process, so these cases now fall back to a blocking wait on a dedicated thread; joining it is fiber-scheduler aware, so the reactor keeps running.
+
+## v1.18.0
+
+  - **Fixed**: Avoid entering a blocking native selector wait when an interrupt is already pending for the current thread.
+
+## v1.17.0
+
+  - Report inherited selector objects as closed after fork, and avoid closing descriptors they no longer own.
+
+## v1.16.4
+
+  - Correctly implement `Interrupt#signal` so that it is robust enough to be called by `Scheduler#unblock`.
+
+## v1.16.3
+
+  - Handle `IOError` raised while shutting down the pure Ruby interrupt pipe, so `IO::Event::Interrupt#close` does not leak expected shutdown errors from the interrupt fiber.
+
+## v1.16.2
+
+  - Improve timer heap performance by batching scheduled timer insertion, compacting cancelled timers during flush, and avoiding unnecessary heap rebuilds for small incremental inserts.
+
+## v1.16.1
+
+  - Ensure the pure Ruby `Select` selector returns `false`, not `nil`, when `io_wait` resumes without any ready events.
+
+## v1.16.0
+
+  - Use `eventfd` for `URing` cross-thread wakeup, and enable `IORING_SETUP_SINGLE_ISSUER`, `IORING_SETUP_DEFER_TASKRUN`, and `IORING_SETUP_TASKRUN_FLAG`. The waking thread now signals via `eventfd` rather than submitting a `NOP` SQE, which unlocks the single-issuer optimisation, defers task work to the application thread, and lets `select()` skip the `io_uring_get_events()` syscall when no task work is pending.
+  - Add support for the `io_close` fiber-scheduler hook (Ruby 4.0+). The `URing` selector performs the close asynchronously via the ring; the `Debug::Selector` and `TestScheduler` wrappers forward to the underlying selector when supported.
+  - Improve `WorkerPool` GC compaction support and add proper write barriers, fixing potential use-after-free under compacting GC.
+  - Keep blocked scheduler fibers alive during GC by registering them as roots in `TestScheduler#block`, preventing premature collection and the resulting use-after-free crash on resume.
+  - Use Ruby's `xmalloc` / `xcalloc` / `xrealloc2` / `xfree` for all internal selector allocations (the per-fiber ready-queue entries in `IO_Event_Selector_ready_push`, and both the backing array and per-element allocations in `IO_Event_Array`). Previously a raw `malloc` paired with a debug-build-only `assert(...)` would silently dereference `NULL` and crash in release builds under memory pressure; the Ruby allocators trigger a GC sweep on pressure and raise `NoMemoryError` / `RangeError` on real failure, so the `-1` return-code paths through `IO_Event_Array_initialize` / `_resize` / `_lookup` and their callers in `epoll.c` / `kqueue.c` / `uring.c` are removed in favour of straight exception propagation.
+  - Correctly handle short `io_uring_submit()` results in the `URing` selector. `io_uring_submit()` returns the number of SQEs actually accepted by the kernel and can be short (SQE prep errors, `ENOMEM`, transient `EAGAIN`); the old accounting reset `pending = 0` on any success and silently lost track of unsubmitted SQEs.
+  - Enable `IORING_SETUP_SUBMIT_ALL` (kernel 5.18+) on the `URing` selector so the kernel keeps processing the rest of an SQE batch past individual errors, reducing the frequency of short submits in practice.
+
+## v1.15.1
+
+  - Simplify closed-IO handling in the `Select` selector: rely on Ruby 4's `rb_thread_io_close_interrupt` to wake fibers waiting on a descriptor that's been closed, removing a custom error-recovery path that could mis-attribute `IOError` / `Errno::EBADF` to the wrong waiter.
+
+## v1.15.0
+
+  - Add bounds checks, in the unlikely event of a user providing an invalid offset that exceeds the buffer size. This prevents potential memory corruption and ensures safe operation when using buffered IO methods.
+
+## v1.14.4
+
+  - Allow `epoll_pwait2` to be disabled via `--disable-epoll_pwait2`.
+
+## v1.14.3
+
+  - Fix several implementation bugs that could cause deadlocks on blocking writes.
+
+## v1.14.0
+
+### Enhanced `IO::Event::PriorityHeap` with deletion and bulk insertion methods
+
+The {ruby IO::Event::PriorityHeap} now supports efficient element removal and bulk insertion:
+
+  - **`delete(element)`**: Remove a specific element from the heap in O(n) time
+  - **`delete_if(&block)`**: Remove elements matching a condition with O(n) amortized bulk deletion
+  - **`concat(elements)`**: Add multiple elements efficiently in O(n) time
+
+<!-- end list -->
+
+``` ruby
+heap = IO::Event::PriorityHeap.new
+
+# Efficient bulk insertion - O(n) instead of O(n log n)
+heap.concat([5, 2, 8, 1, 9, 3])
+
+# Remove specific element
+removed = heap.delete(5)  # Returns 5, heap maintains order
+
+# Bulk removal with condition
+count = heap.delete_if{|x| x.even?}  # Removes 2, 8 efficiently
+```
+
+The `delete_if` and `concat` methods are particularly efficient for bulk operations, using bottom-up heapification to maintain the heap property in O(n) time. This provides significant performance improvements:
+
+  - **Bulk insertion**: O(n log n) → O(n) for adding multiple elements
+  - **Bulk deletion**: O(k×n) → O(n) for removing k elements
+
+Both methods maintain the heap invariant and include comprehensive test coverage with edge case validation.
+
+## v1.11.2
+
+  - Fix Windows build.
+
+## v1.11.1
+
+  - Fix `read_nonblock` when using the `URing` selector, which was not handling zero-length reads correctly. This allows reading available data without blocking.
+
+## v1.11.0
+
+### Introduce `IO::Event::WorkerPool` for off-loading blocking operations.
+
+The {ruby IO::Event::WorkerPool} provides a mechanism for executing blocking operations on separate OS threads while properly integrating with Ruby's fiber scheduler and GVL (Global VM Lock) management. This enables true parallelism for CPU-intensive or blocking operations that would otherwise block the event loop.
+
+``` ruby
+# Fiber scheduler integration via blocking_operation_wait hook
+class MyScheduler
+	def initialize
+		@worker_pool = IO::Event::WorkerPool.new
+	end
+	
+	def blocking_operation_wait(operation)
+		@worker_pool.call(operation)
+	end
+end
+
+# Usage with automatic offloading
+Fiber.set_scheduler(MyScheduler.new)
+# Automatically offload `rb_nogvl(..., RB_NOGVL_OFFLOAD_SAFE)` to a background thread:
+result = some_blocking_operation()
+```
+
+The implementation uses one or more background threads and a list of pending blocking operations. Those operations either execute through to completion or may be cancelled, which executes the "unblock function" provided to `rb_nogvl`.
+
+## v1.10.2
+
+  - Improved consistency of handling closed IO when invoking `#select`.
+
+## v1.10.0
+
+  - `IO::Event::Profiler` is moved to dedicated gem: [fiber-profiler](https://github.com/socketry/fiber-profiler).
+  - Perform runtime checks for native selectors to ensure they are supported in the current environment. While compile-time checks determine availability, restrictions like seccomp and SELinux may still prevent them from working.
+
+## v1.9.0
+
+  - Improved `IO::Event::Profiler` for detecting stalls.
+
+## v1.8.0
+
+  - Detecting fibers that are stalling the event loop.
+
+## v1.7.5
+
+  - Fix `process_wait` race condition on EPoll that could cause a hang.

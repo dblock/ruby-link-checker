@@ -1,4 +1,4 @@
-### 0.5.0 (Next)
+### 0.5.0 (2026/11/07)
 
 * [#27](https://github.com/dblock/ruby-link-checker/pull/27): Avoided duplicate test and lint runs by checking pull requests and pushes to `main` only - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#26](https://github.com/dblock/ruby-link-checker/pull/26): Added ruby-gem-release automation with manual, dry-run-first releases and RubyGems Trusted Publishing - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
@@ -6,7 +6,6 @@
 * [#24](https://github.com/dblock/ruby-link-checker/pull/24): Added transient-only retries, opt-in retry delays/backoff/jitter and `Retry-After` handling, transport error categories, and an Async concurrency limit - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#25](https://github.com/dblock/ruby-link-checker/pull/25): Added opt-in URL deduplication and atomic TTL-based success caching, preserving per-submission metadata and query values - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#8](https://github.com/dblock/ruby-link-checker/issues/8): Added `protocol` configuration option to `LinkChecker::Async::HTTP` to force HTTP/1 or HTTP/2 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
-* Your contribution here.
 
 ### 0.4.0 (2026/8/17)
 

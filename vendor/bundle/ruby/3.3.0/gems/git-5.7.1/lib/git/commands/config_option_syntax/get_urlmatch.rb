@@ -1,0 +1,111 @@
+# frozen_string_literal: true
+
+require 'git/commands/base'
+
+module Git
+  module Commands
+    module ConfigOptionSyntax
+      # Retrieve config values matching a URL
+      #
+      # Wraps `git config --get-urlmatch` to return config entries whose
+      # key name matches the given name and whose URL pattern matches the
+      # given URL.
+      #
+      # @example Get URL-matched config
+      #   cmd = Git::Commands::ConfigOptionSyntax::GetUrlmatch.new(lib)
+      #   cmd.call('http', 'https://example.com')
+      #
+      # @note `arguments` block audited against https://git-scm.com/docs/git-config/2.53.0
+      #
+      # @see Git::Commands::ConfigOptionSyntax
+      #
+      # @see https://git-scm.com/docs/git-config git-config
+      #
+      # @api private
+      #
+      class GetUrlmatch < Git::Commands::Base
+        arguments do
+          literal 'config'
+          literal '--get-urlmatch'
+
+          # File-scope options
+          flag_option :global
+          flag_option :system
+          flag_option :local
+          flag_option :worktree
+          value_option %i[file f]
+          value_option :blob
+
+          # Type constraint
+          value_option :type, inline: true
+
+          # Output modifier
+          flag_option %i[null z]
+
+          # General read options
+          flag_option :includes, negatable: true
+
+          # Output modifiers
+          flag_option :show_scope
+
+          # Operands
+          end_of_options
+          operand :name, required: true
+          operand :url, required: true
+        end
+
+        # git config --get-urlmatch exits 1 when no match is found (not an error)
+        allow_exit_status 0..1
+
+        # @overload call(name, url, **options)
+        #
+        #     Execute the `git config --get-urlmatch` command
+        #
+        #     @param name [String] the config key name (or section prefix) to look up
+        #
+        #     @param url [String] the URL to match against
+        #
+        #     @param options [Hash] command options
+        #
+        #     @option options [Boolean, nil] :global (nil) read from global config (`~/.gitconfig`)
+        #
+        #     @option options [Boolean, nil] :system (nil) read from system config
+        #
+        #     @option options [Boolean, nil] :local (nil) read from repository config (`.git/config`)
+        #
+        #     @option options [Boolean, nil] :worktree (nil) read from worktree config
+        #
+        #     @option options [String] :file (nil) read from the specified file
+        #
+        #       Alias: :f
+        #
+        #     @option options [String] :blob (nil) read from the specified blob
+        #
+        #     @option options [String] :type (nil) ensure values conform to the given type
+        #
+        #     @option options [Boolean, nil] :null (nil) terminate values with NUL byte instead of newline
+        #
+        #       Alias: :z
+        #
+        #     @option options [Boolean, nil] :includes (nil) respect include directives in config files (`--includes`)
+        #
+        #     @option options [Boolean, nil] :no_includes (nil) disable include directives
+        #       in config files (`--no-includes`)
+        #
+        #     @option options [Boolean, nil] :show_scope (nil) show the scope of each config entry
+        #
+        #     @return [Git::CommandLine::Result] the result of calling `git config --get-urlmatch`
+        #
+        #     @raise [ArgumentError] if unsupported options are provided
+        #
+        #     @raise [Git::FailedError] if git exits outside the allowed range (exit code > 1)
+        #
+        #     @api public
+        #
+        def call(*, **)
+          super
+        end
+      end
+    end
+  end
+end
