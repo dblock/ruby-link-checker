@@ -10,6 +10,7 @@ module LinkChecker
           read_timeout
           open_timeout
           protocol
+          max_concurrency
         ].freeze
 
         attr_accessor(*Config::ATTRIBUTES)
@@ -18,6 +19,7 @@ module LinkChecker
           self.read_timeout = nil
           self.open_timeout = nil
           self.protocol = nil
+          self.max_concurrency = nil
         end
       end
 

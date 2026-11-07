@@ -33,6 +33,43 @@ describe LinkChecker::Async::HTTP::Checker do
     LinkChecker::Async::HTTP::Config.reset
   end
 
+  describe 'concurrency' do
+    let(:checker) { described_class.new(max_concurrency: 2) }
+    let(:counts) { [] }
+    let(:completed) { [] }
+
+    before do
+      active = 0
+      5.times do
+        checker._queue do
+          counts << (active += 1)
+          sleep(0.005)
+          active -= 1
+          completed << active
+        end
+      end
+    end
+
+    it 'bounds active work and waits for queued tasks' do
+      checker.run
+      expect(counts.max).to eq(2)
+      expect(counts.size).to eq(5)
+      expect(completed.size).to eq(5)
+      expect(completed.last).to eq(0)
+    end
+
+    it 'rejects invalid limits' do
+      expect { described_class.new(max_concurrency: 0) }.to raise_error ArgumentError
+    end
+
+    it 'reuses clients for the same endpoint' do
+      expect(checker._client_for(URI('https://www.example.org/one'))).to equal(
+        checker._client_for(URI('https://www.example.org/two'))
+      )
+      checker.run
+    end
+  end
+
   describe AsyncTestLinkChecker::LinkChecker do
     it_behaves_like 'a link checker'
 

@@ -11,6 +11,12 @@ module LinkChecker
       logger
       retries
       max_redirects
+      retry_status_codes
+      retry_after
+      retry_backoff
+      retry_jitter
+      max_retry_delay
+      respect_retry_after
     ].freeze
 
     attr_accessor(*Config::ATTRIBUTES)
@@ -22,6 +28,12 @@ module LinkChecker
       self.logger = nil
       self.retries = 0
       self.max_redirects = 20
+      self.retry_status_codes = [408, 425, 429, 500, 502, 503, 504]
+      self.retry_after = 0
+      self.retry_backoff = 1
+      self.retry_jitter = 0
+      self.max_retry_delay = 60
+      self.respect_retry_after = false
     end
 
     def retries=(value)
@@ -34,6 +46,44 @@ module LinkChecker
       raise ArgumentError, "Invalid redirect limit: #{value}" unless value.is_a?(Integer) && value >= 0
 
       @max_redirects = value
+    end
+
+    def retry_status_codes=(value)
+      unless value.nil? || (value.is_a?(Array) && value.all? { |code| code.is_a?(Integer) && code.between?(100, 599) })
+        raise ArgumentError, "Invalid retry status codes: #{value}"
+      end
+
+      @retry_status_codes = value&.dup
+    end
+
+    def retry_after=(value)
+      validate_number!(:retry_after, value, 0)
+      @retry_after = value
+    end
+
+    def retry_backoff=(value)
+      validate_number!(:retry_backoff, value, 1)
+      @retry_backoff = value
+    end
+
+    def retry_jitter=(value)
+      validate_number!(:retry_jitter, value, 0)
+      raise ArgumentError, "Invalid retry_jitter: #{value}" if value > 1
+
+      @retry_jitter = value
+    end
+
+    def max_retry_delay=(value)
+      validate_number!(:max_retry_delay, value, 0)
+      @max_retry_delay = value
+    end
+
+    private
+
+    def validate_number!(name, value, minimum)
+      return if value.is_a?(Numeric) && value.real? && value.finite? && value >= minimum
+
+      raise ArgumentError, "Invalid #{name}: #{value}"
     end
   end
 

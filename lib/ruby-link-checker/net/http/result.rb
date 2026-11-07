@@ -30,6 +30,10 @@ module LinkChecker
           request
         end
 
+        def response_headers
+          response || {}
+        end
+
         def redirect_to
           return nil unless response
 

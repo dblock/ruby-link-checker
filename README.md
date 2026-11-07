@@ -20,6 +20,8 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
   - [Options](#options)
     - [Retries](#retries)
     - [Redirects](#redirects)
+    - [Retry After](#retry-after)
+    - [Retry Policy](#retry-policy)
     - [Results](#results)
     - [Methods](#methods)
     - [Logger](#logger)
@@ -180,6 +182,12 @@ LinkChecker::Async::HTTP.configure do |config|
 end
 ```
 
+Async::HTTP reuses connection-pooling clients per scheme/host/port. Its default concurrency is unlimited; set `max_concurrency` to bound active requests without counting delayed retries against that limit.
+
+```ruby
+checker = LinkChecker::Async::HTTP::Checker.new(max_concurrency: 25)
+```
+
 #### [LinkChecker::Net::HTTP](lib/ruby-link-checker/net/http/checker.rb)
 
 Slow, sequential checker.
@@ -218,7 +226,7 @@ end
 
 #### Retries
 
-By default link checkers do not retry. Set `retries` to retry errors and failures. The retry budget is shared across methods: with `retries: 2` and the default methods, repeated failures produce `HEAD`, `HEAD`, `HEAD`, then `GET`.
+By default link checkers do not retry. Set `retries` to enable retries for transient connection errors/timeouts and HTTP statuses 408, 425, 429, 500, 502, 503, and 504. Permanent HTTP failures and invalid URLs are not retried. HEAD-to-GET fallback still applies independently of the retry policy. The retry budget is shared across methods: with `retries: 2`, repeated transient failures produce `HEAD`, `HEAD`, `HEAD`, then `GET`.
 
 ```ruby
 checker = LinkChecker::Net::HTTP::Checker.new(retries: 1)
@@ -230,6 +238,31 @@ Checkers follow up to 20 redirects per attempt and detect redirect loops. Relati
 
 ```ruby
 checker = LinkChecker::Typhoeus::Hydra::Checker.new(max_redirects: 10)
+```
+
+#### Retry After
+
+Set `retry_after` to a minimum delay in seconds (default `0`). Optional `retry_backoff` multiplies that delay on successive retries (default `1`), and `retry_jitter` adds a random fraction between `0` and the configured value (default `0`, maximum `1`). All delays are capped by `max_retry_delay` (default `60` seconds).
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(
+  retries: 2,
+  retry_after: 1,
+  retry_backoff: 2,
+  retry_jitter: 0.1,
+  respect_retry_after: true,
+  max_retry_delay: 60
+)
+```
+
+With `respect_retry_after: true` (default `false`), HTTP `Retry-After` delta-seconds and dates provide a minimum delay, subject to the same cap. Invalid or past dates are ignored. Async delays yield without blocking other requests. Hydra queues delayed retries after the active batch drains, so actual delays can exceed the configured minimum without blocking completion callbacks. Delays apply to retries, not ordinary HEAD-to-GET fallback.
+
+#### Retry Policy
+
+Customize `retry_status_codes` to choose retryable HTTP statuses. Set it to `nil` to restore the previous behavior of retrying every failure and error, including malformed URLs and programming errors.
+
+```ruby
+checker = LinkChecker::Net::HTTP::Checker.new(retries: 1, retry_status_codes: [429, 503])
 ```
 
 #### Results
@@ -342,6 +375,8 @@ Events are called with results, which contain the following properties.
 | :request_headers  | Request headers.                                                |
 | :redirect_to      | A redirect URL in case of redirects.                            |
 | :error            | A raised error in case of errors.                               |
+| :error_type       | `:timeout`, `:connection`, or `:other` for errors; otherwise `nil`. |
+| :response_headers | Response headers, accessible using `[]`.                        |
 
 See [result.rb](lib/ruby-link-checker/result.rb) for more details.
 

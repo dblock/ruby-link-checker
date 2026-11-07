@@ -90,4 +90,51 @@ describe LinkChecker::Typhoeus::Hydra::Checker do
       checker.run
     end
   end
+
+  describe 'delayed retries' do
+    let(:checker) { described_class.new(methods: ['GET'], retries: 1, retry_after: 0.005) }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    it 'processes unrelated requests before waiting for a retry' do
+      completed = []
+      stub_request(:get, 'https://www.example.org/retry').to_return({ status: 503 }, { status: 200 })
+      stub_request(:get, 'https://www.example.org/other').to_return(status: 200)
+      checker.on(:success) { |result| completed << result.uri.path }
+      checker.check('https://www.example.org/retry')
+      checker.check('https://www.example.org/other')
+      checker.run
+      expect(completed).to eq(['/other', '/retry'])
+    end
+  end
+
+  describe 'transport failures' do
+    let(:checker) { described_class.new(methods: ['GET']) }
+
+    around do |example|
+      VCR.turned_off do
+        WebMock.disable!
+        Typhoeus::Config.block_connection = true
+        example.run
+      ensure
+        Typhoeus::Config.block_connection = false
+        WebMock.enable!
+      end
+    end
+
+    after do
+      Typhoeus::Expectation.clear
+    end
+
+    it 'reports connection errors separately from HTTP failures' do
+      response = Typhoeus::Response.new(code: 0, return_code: :couldnt_connect)
+      Typhoeus.stub(nil).and_return(response)
+      checker.check('https://www.example.org/')
+      checker.run
+      expect(checker.results[:failure]).to be_empty
+      expect(checker.results[:error].first.error_type).to eq(:connection)
+    end
+  end
 end

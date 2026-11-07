@@ -14,4 +14,21 @@ describe LinkChecker::ResultError do
   it 'returns the error class name as code' do
     expect(result.code).to eq 'StandardError'
   end
+
+  it 'classifies native timeouts without replacing the exception' do
+    error = Net::ReadTimeout.new('timeout')
+    result.error = error
+    expect(result.error_type).to eq(:timeout)
+    expect(result.error).to equal(error)
+  end
+
+  it 'classifies native connection failures' do
+    result.error = Errno::ECONNREFUSED.new
+    expect(result.error_type).to eq(:connection)
+  end
+
+  it 'does not classify programming errors as transient' do
+    result.error = ArgumentError.new
+    expect(result.error_type).to eq(:other)
+  end
 end

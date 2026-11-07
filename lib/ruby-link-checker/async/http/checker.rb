@@ -3,7 +3,7 @@ module LinkChecker
     module HTTP
       class Task < ::LinkChecker::Task
         def run!
-          checker._queue { _run! }
+          checker._queue(delay: delay) { _run! }
         end
 
         private
@@ -42,25 +42,36 @@ module LinkChecker
           end
           @queue = []
           @clients = {}
+          if max_concurrency && (!max_concurrency.is_a?(Integer) || max_concurrency < 1)
+            raise ArgumentError, "Invalid concurrency limit: #{max_concurrency}"
+          end
+
           super
         end
 
         # Runs all queued checks concurrently and blocks until they complete.
         def run
+          require 'async/semaphore'
+
           Barrier do |barrier|
             @barrier = barrier
+            @semaphore = ::Async::Semaphore.new(max_concurrency) if max_concurrency
             _flush!
           end
         ensure
           @barrier = nil
+          @semaphore = nil
           _close_clients!
         end
 
-        def _queue(&block)
+        def _queue(delay: 0, &block)
           if @barrier
-            @barrier.async(&block)
+            @barrier.async do
+              sleep(delay) if delay.positive?
+              @semaphore ? @semaphore.acquire(&block) : block.call
+            end
           else
-            @queue << block
+            @queue << [delay, block]
           end
         end
 
@@ -94,7 +105,7 @@ module LinkChecker
         def _flush!
           queue = @queue
           @queue = []
-          queue.each { |block| @barrier.async(&block) }
+          queue.each { |delay, block| _queue(delay: delay, &block) }
         end
 
         def _close_clients!
