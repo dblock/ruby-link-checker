@@ -137,6 +137,108 @@ shared_context 'a link checker' do
     end
   end
 
+  context 'with deduplication' do
+    let(:checker) { described_class.new(methods: ['GET'], deduplicate: true) }
+    let(:url) { 'https://www.example.org/' }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    it 'checks once and preserves metadata for every submission' do
+      stub_request(:any, url).to_return(status: 200)
+      checker.check(url, location: 'one.html')
+      checker.check(url, location: 'two.html')
+      checker.run if checker.respond_to?(:run)
+      expect(a_request(:any, url)).to have_been_made.once
+      expect(checker.results[:success].map(&:options)).to eq([{ location: 'one.html' }, { location: 'two.html' }])
+      expect(checker.results[:success].map(&:uri)).to eq([URI(url), URI(url)])
+    end
+
+    it 'rechecks failures instead of retaining them' do
+      stub_request(:any, url).to_return({ status: 404 }, { status: 200 })
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      expect(a_request(:any, url)).to have_been_made.twice
+      expect(checker.results[:failure].size).to eq(1)
+      expect(checker.results[:success].size).to eq(1)
+    end
+
+    it 'keeps query values distinct' do
+      stub_request(:any, "#{url}?id=1").to_return(status: 200)
+      stub_request(:any, "#{url}?id=2").to_return(status: 404)
+      checker.check("#{url}?id=1")
+      checker.check("#{url}?id=2")
+      checker.run if checker.respond_to?(:run)
+      expect(checker.results[:success].first.uri.query).to eq('id=1')
+      expect(checker.results[:failure].first.uri.query).to eq('id=2')
+    end
+
+    it 'includes headers in request identity' do
+      stub_request(:any, url).to_return(status: 200)
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      checker.headers = { 'Accept' => 'text/html' }
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      expect(a_request(:any, url)).to have_been_made.twice
+    end
+
+    context 'without result collection' do
+      let(:checker) { described_class.new(methods: ['GET'], deduplicate: true, results: false) }
+
+      it 'still delivers results to every subscriber' do
+        completed = []
+        stub_request(:any, url).to_return(status: 200)
+        checker.on(:success) { |result| completed << result.options }
+        checker.check(url, location: 'one.html')
+        checker.check(url, location: 'two.html')
+        checker.run if checker.respond_to?(:run)
+        expect(completed).to eq([{ location: 'one.html' }, { location: 'two.html' }])
+        expect(checker.results).to be_nil
+      end
+    end
+  end
+
+  context 'with persistent caching' do
+    let(:directory) { Dir.mktmpdir('link-checker-spec-') }
+    let(:cache_options) { { file: File.join(directory, 'cache.json'), ttl: 60 } }
+    let(:checker) { described_class.new(methods: ['GET'], cache: cache_options) }
+    let(:next_checker) { described_class.new(methods: ['GET'], cache: cache_options) }
+    let(:url) { 'https://www.example.org/' }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    after do
+      FileUtils.remove_entry(directory)
+    end
+
+    it 'reuses a success across checker instances with fresh metadata' do
+      stub_request(:any, url).to_return(status: 200)
+      checker.check(url, location: 'one.html')
+      checker.run if checker.respond_to?(:run)
+      next_checker.check(url, location: 'two.html')
+      next_checker.run if next_checker.respond_to?(:run)
+      expect(next_checker.results[:success].first.cached?).to be true
+      expect(next_checker.results[:success].first.options).to eq(location: 'two.html')
+      expect(a_request(:any, url)).to have_been_made.once
+    end
+
+    it 'does not persist failed checks' do
+      stub_request(:any, url).to_return({ status: 404 }, { status: 200 })
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      next_checker.check(url)
+      next_checker.run if next_checker.respond_to?(:run)
+      expect(next_checker.results[:success].first.cached?).to be false
+      expect(a_request(:any, url)).to have_been_made.twice
+    end
+  end
+
   context 'default' do
     subject do
       described_class.new

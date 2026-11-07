@@ -4,6 +4,7 @@ require 'socket'
 module LinkChecker
   class Result
     attr_accessor :uri, :result_uri, :method, :options, :checker
+    attr_writer :cached
 
     def initialize(current_uri, method, original_uri, options = {})
       @uri = original_uri
@@ -14,6 +15,10 @@ module LinkChecker
 
     def success?
       false
+    end
+
+    def cached?
+      !!@cached
     end
 
     def failure?
