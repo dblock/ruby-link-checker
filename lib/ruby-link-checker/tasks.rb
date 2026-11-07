@@ -29,6 +29,7 @@ module LinkChecker
       elsif methods_left.any?
         @method = methods_left.shift
         @uri = URI(@uri) unless @uri.is_a?(URI)
+        @redirects = [@uri] if @result.nil?
         _queue_task(uri, method, original_uri || uri, options)
       elsif @result && result.error?
         error! @result
@@ -88,14 +89,17 @@ module LinkChecker
       result! result
       if result.redirect?
         redirect! result
-        redirected_to_uri = URI.join(uri, result.redirect_to)
+        redirected_to_uri = URI.join(result.result_uri, result.redirect_to)
         if redirects.include?(redirected_to_uri)
           raise LinkChecker::Errors::RedirectLoopError,
                 redirects.push(redirected_to_uri)
         end
+        if redirects.length - 1 >= checker.max_redirects
+          raise LinkChecker::Errors::RedirectLimitError.new(checker.max_redirects, redirects + [redirected_to_uri])
+        end
 
         redirects << redirected_to_uri
-        _queue_task(redirected_to_uri, result.method, uri, options)
+        _queue_task(redirected_to_uri, result.method, result.uri, options)
       elsif result.success?
         success! result
       else
@@ -104,7 +108,7 @@ module LinkChecker
       end
     rescue StandardError => e
       logger.error("#{self}##{__method__}") { e } rescue nil
-      error_result = ResultError.new(result.uri, result.method, result.result_uri, e, options)
+      error_result = ResultError.new(result.result_uri, result.method, result.uri, e, options)
       result! error_result
       error! error_result
     end

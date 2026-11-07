@@ -6,7 +6,7 @@ module LinkChecker
     include LinkChecker::Callbacks
 
     attr_reader :results
-    attr_accessor(*Config::ATTRIBUTES)
+    attr_accessor(*(Config::ATTRIBUTES - %i[max_redirects]))
 
     def initialize(options = {})
       LinkChecker::Config::ATTRIBUTES.each do |key|
