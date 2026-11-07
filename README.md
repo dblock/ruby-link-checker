@@ -19,7 +19,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [LinkChecker::Net::HTTP](#linkcheckernethttp)
   - [Options](#options)
     - [Retries](#retries)
-    - [Retry After](#retry-after)
+    - [Redirects](#redirects)
     - [Results](#results)
     - [Methods](#methods)
     - [Logger](#logger)
@@ -218,18 +218,18 @@ end
 
 #### Retries
 
-By default link checkers do not retry. You can set a number of times to retry all errors and failures with `retries`.
+By default link checkers do not retry. Set `retries` to retry errors and failures. The retry budget is shared across methods: with `retries: 2` and the default methods, repeated failures produce `HEAD`, `HEAD`, `HEAD`, then `GET`.
 
 ```ruby
-checker = LinkChecker::Net::HTTP::Checker.new(retry: 1)
+checker = LinkChecker::Net::HTTP::Checker.new(retries: 1)
 ```
 
-#### Retry After
+#### Redirects
 
-If retry is enabled, link checkers can wait for a number of seconds before retrying.
+Checkers follow up to 20 redirects per attempt and detect redirect loops. Relative redirects are resolved against the current response URL. Set `max_redirects` to change the limit, or use `0` to disable redirects.
 
 ```ruby
-checker = LinkChecker::Net::HTTP::Checker.new(retry_after: 1) # wait for 1 second before retrying
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(max_redirects: 10)
 ```
 
 #### Results

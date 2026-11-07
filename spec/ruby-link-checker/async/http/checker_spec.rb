@@ -21,9 +21,10 @@ describe LinkChecker::Async::HTTP::Checker do
       config.hook_into :webmock
       # async-http's WebMock adapter replays responses through a real HTTP/1
       # parser, which rejects a Transfer-Encoding header alongside a
-      # Content-Length or an empty body, unlike the other checkers' adapters.
+      # Content-Length or an empty body. Let the adapter set Content-Length.
       config.before_playback do |interaction|
         interaction.response.headers.delete('Transfer-Encoding')
+        interaction.response.headers.delete_if { |key, _value| key.downcase == 'content-length' }
       end
     end
   end

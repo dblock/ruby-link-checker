@@ -10,6 +10,7 @@ module LinkChecker
       headers
       logger
       retries
+      max_redirects
     ].freeze
 
     attr_accessor(*Config::ATTRIBUTES)
@@ -20,12 +21,19 @@ module LinkChecker
       self.headers = {}
       self.logger = nil
       self.retries = 0
+      self.max_redirects = 20
     end
 
     def retries=(value)
       raise ArgumentError, "Invalid number of retries: #{value}" unless value.is_a?(Integer) && value >= 0
 
       @retries = value
+    end
+
+    def max_redirects=(value)
+      raise ArgumentError, "Invalid redirect limit: #{value}" unless value.is_a?(Integer) && value >= 0
+
+      @max_redirects = value
     end
   end
 

@@ -15,7 +15,7 @@ describe LinkChecker::Typhoeus::Hydra::Checker do
   end
   before :all do
     VCR.configure do |config|
-      config.hook_into :typhoeus
+      config.hook_into :webmock
     end
   end
 

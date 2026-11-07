@@ -1,4 +1,55 @@
 shared_context 'a link checker' do
+  context 'with redirects', :aggregate_failures do
+    let(:checker) { described_class.new(methods: ['GET'], max_redirects: 2) }
+    let(:url) { 'https://www.example.org/start' }
+    let(:result) { checker.results.values.flatten.first }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    it 'resolves each relative redirect against the current URL' do
+      stub_request(:any, url).to_return(status: 302, headers: { 'Location' => '/nested/next' })
+      stub_request(:any, 'https://www.example.org/nested/next').to_return(status: 302, headers: { 'Location' => 'final' })
+      stub_request(:any, 'https://www.example.org/nested/final').to_return(status: 200)
+      checker.check(url, location: 'page.html')
+      checker.run if checker.respond_to?(:run)
+      expect(result.uri.to_s).to eq(url)
+      expect(result.result_uri.to_s).to eq('https://www.example.org/nested/final')
+      expect(result.options).to eq(location: 'page.html')
+    end
+
+    it 'stops redirect chains at the configured limit' do
+      stub_request(:any, url).to_return(status: 302, headers: { 'Location' => '/one' })
+      stub_request(:any, 'https://www.example.org/one').to_return(status: 302, headers: { 'Location' => '/two' })
+      stub_request(:any, 'https://www.example.org/two').to_return(status: 302, headers: { 'Location' => '/three' })
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      expect(result.error).to be_a(LinkChecker::Errors::RedirectLimitError)
+      expect(result.uri.to_s).to eq(url)
+      expect(result.result_uri.to_s).to eq('https://www.example.org/two')
+      expect(a_request(:any, 'https://www.example.org/three')).not_to have_been_made
+    end
+
+    it 'detects a redirect back to the original URL without requesting it again' do
+      stub_request(:any, url).to_return(status: 302, headers: { 'Location' => '/one' })
+      stub_request(:any, 'https://www.example.org/one').to_return(status: 302, headers: { 'Location' => url })
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      expect(checker.results[:error].first.error).to be_a(LinkChecker::Errors::RedirectLoopError)
+      expect(a_request(:any, url)).to have_been_made.once
+    end
+
+    it 'allows redirects to be disabled' do
+      checker.max_redirects = 0
+      stub_request(:any, url).to_return(status: 302, headers: { 'Location' => '/one' })
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      expect(checker.results[:error].first.error).to be_a(LinkChecker::Errors::RedirectLimitError)
+      expect(a_request(:any, 'https://www.example.org/one')).not_to have_been_made
+    end
+  end
+
   context 'default' do
     subject do
       described_class.new
@@ -240,7 +291,7 @@ shared_context 'a link checker' do
               expect(result.error?).to be true
               expect(result.error).to be_a LinkChecker::Errors::RedirectLoopError
               expect(result.redirect?).to be false
-              expect(subject).to have_received(:called!).with(:redirect, anything).twice
+              expect(subject).to have_received(:called!).with(:redirect, anything).once
               expect(subject).to have_received(:called!).with(:error, result)
               expect(subject).not_to have_received(:called!).with(:failure, result)
               expect(subject).not_to have_received(:called!).with(:success, result)

@@ -19,6 +19,12 @@ describe LinkChecker::Config do
       it 'requires a positive integer' do
         expect { LinkChecker.config.retries = -1 }.to raise_error ArgumentError, 'Invalid number of retries: -1'
       end
+
+      context 'max_redirects' do
+        it 'rejects negative limits' do
+          expect { LinkChecker.config.max_redirects = -1 }.to raise_error ArgumentError, 'Invalid redirect limit: -1'
+        end
+      end
     end
   end
 

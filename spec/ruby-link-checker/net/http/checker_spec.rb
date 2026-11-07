@@ -15,6 +15,21 @@ describe LinkChecker::Net::HTTP::Checker do
 
   it_behaves_like 'a link checker'
 
+  context 'with an HTTP URL' do
+    let(:checker) { described_class.new(methods: ['GET']) }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    it 'does not enable TLS' do
+      stub_request(:get, 'http://www.example.org/').to_return(status: 200)
+      checker.check('http://www.example.org/')
+      expect(checker.results[:success].first.code).to eq(200)
+      expect(a_request(:get, 'http://www.example.org/')).to have_been_made.once
+    end
+  end
+
   describe '.config' do
     it 'returns the Config module' do
       expect(LinkChecker::Net::HTTP.config).to eq LinkChecker::Net::HTTP::Config
