@@ -137,4 +137,44 @@ describe LinkChecker::Typhoeus::Hydra::Checker do
       expect(checker.results[:error].first.error_type).to eq(:connection)
     end
   end
+
+  describe 'in-flight deduplication' do
+    let(:checker) { described_class.new(methods: ['GET'], deduplicate: true) }
+    let(:url) { 'https://www.example.org/' }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    it 'fans out events to duplicates queued before completion' do
+      metadata = []
+      stub_request(:any, url).to_return(status: 200)
+      checker.on(:result) { |result| metadata << result.options }
+      checker.check(url, location: 'one.html')
+      checker.check(url, location: 'two.html')
+      checker.run
+      expect(a_request(:any, url)).to have_been_made.once
+      expect(metadata).to eq([{ location: 'one.html' }, { location: 'two.html' }])
+    end
+
+    it 'replays events when a subscriber joins during a result callback' do
+      stub_request(:any, url).to_return(status: 200)
+      checker.on(:result) { |result| checker.check(url, location: 'two.html') if result.options[:location] == 'one.html' }
+      checker.check(url, location: 'one.html')
+      checker.run
+      expect(checker.results[:success].map(&:options)).to eq([{ location: 'one.html' }, { location: 'two.html' }])
+      expect(a_request(:any, url)).to have_been_made.once
+    end
+
+    it 'does not memoize a response if settings changed while queued' do
+      stub_request(:any, url).to_return(status: 200)
+      checker.check(url)
+      checker.headers = { 'Accept' => 'text/html' }
+      checker.run
+      checker.headers = {}
+      checker.check(url)
+      checker.run
+      expect(a_request(:any, url)).to have_been_made.twice
+    end
+  end
 end

@@ -17,6 +17,8 @@ module LinkChecker
       retry_jitter
       max_retry_delay
       respect_retry_after
+      deduplicate
+      cache
     ].freeze
 
     attr_accessor(*Config::ATTRIBUTES)
@@ -34,6 +36,8 @@ module LinkChecker
       self.retry_jitter = 0
       self.max_retry_delay = 60
       self.respect_retry_after = false
+      self.deduplicate = false
+      self.cache = nil
     end
 
     def retries=(value)

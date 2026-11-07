@@ -24,6 +24,8 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [Retry Policy](#retry-policy)
     - [Results](#results)
     - [Methods](#methods)
+    - [Deduplication](#deduplication)
+    - [Caching](#caching)
     - [Logger](#logger)
     - [User-Agent](#user-agent)
     - [Headers](#headers)
@@ -297,6 +299,34 @@ The following examples disables `GET` and only makes `HEAD` requests.
 checker = LinkChecker::Net::HTTP::Checker.new(methods: %w[HEAD])
 ```
 
+#### Deduplication
+
+Set `deduplicate: true` to coalesce identical in-flight requests and reuse successful results for the lifetime of the checker. Failures and errors are rechecked after completion. Each submission still receives its own result events and metadata, including events emitted before it joined an in-flight check. Deduplication is disabled by default.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(deduplicate: true)
+checker.check('https://www.example.org', location: 'one.html')
+checker.check('https://www.example.org', location: 'two.html')
+checker.run # one check, two sets of result events
+```
+
+Identity includes the complete URL (including query values and fragment), transport, methods, headers, user-agent, and request-related settings. Changing those settings prevents reuse. URLs containing user-info credentials bypass deduplication and caching.
+
+#### Caching
+
+Persistent success caching is disabled by default. Enable it with an explicit file path and positive TTL in seconds. Recent successful checks can then be reused across checker instances; failures and errors are never stored. Cache writes are atomic and locked, and unreadable or malformed files fall back to normal checking.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(
+  deduplicate: true,
+  cache: { file: 'tmp/link-checker/cache.json', ttl: 3600 }
+)
+```
+
+Each cache hit emits `:result` and `:success` with the new submission's metadata and `cached? == true`. Persistent hits return `LinkChecker::CachedResult` with the HTTP method, status, original/final URIs, and metadata; native request/response objects and headers are not persisted. Redirect targets containing user-info credentials are not written. Add the cache directory to your ignore rules.
+
+Caching alone does not coalesce in-flight checks. With deduplication enabled, successful results remain reusable within that checker even after the persistent TTL expires. Cached successes do not replay historical redirect/retry events.
+
 #### Logger
 
 Pass your own logger.
@@ -377,6 +407,7 @@ Events are called with results, which contain the following properties.
 | :error            | A raised error in case of errors.                               |
 | :error_type       | `:timeout`, `:connection`, or `:other` for errors; otherwise `nil`. |
 | :response_headers | Response headers, accessible using `[]`.                        |
+| :cached?          | Whether this result was reused from a successful check.         |
 
 See [result.rb](lib/ruby-link-checker/result.rb) for more details.
 
