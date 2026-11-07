@@ -15,4 +15,12 @@ end
 require 'rubocop/rake_task'
 RuboCop::RakeTask.new(:rubocop)
 
+require 'ruby-gem-release/workflow/ruby_gem'
+require 'ruby-gem-release/changelog'
+
+RubyGemRelease::Workflow::RubyGem.new(
+  version: RubyGemRelease::Version::RubyConstant.new(path: 'lib/ruby-link-checker/version.rb', constant: 'VERSION'),
+  changelog: RubyGemRelease::Changelog::Intridea.new(placeholder: '* Your contribution here.')
+).install_tasks
+
 task default: %i[rubocop spec]
