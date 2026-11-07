@@ -120,6 +120,10 @@ Go back to your pull request after a few minutes and see whether it passed muste
 
 It's likely that your change will not be merged and that the nitpicky maintainers will ask you to do more, or fix seemingly benign problems. Hang on there!
 
+## Releases
+
+See [RELEASING.md](RELEASING.md) for the manual release workflow, dry runs, and one-time Trusted Publishing setup.
+
 ## Thank You
 
 Please do know that we really appreciate and value your time and work. We love you, really.

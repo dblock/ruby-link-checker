@@ -1,5 +1,6 @@
 ### 0.5.0 (Next)
 
+* [#26](https://github.com/dblock/ruby-link-checker/pull/26): Added ruby-gem-release automation with manual, dry-run-first releases and RubyGems Trusted Publishing - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#23](https://github.com/dblock/ruby-link-checker/pull/23): Fixed chained relative redirects, bounded redirect following with `max_redirects`, enabled plain HTTP in the Net::HTTP checker, and corrected retry documentation - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#24](https://github.com/dblock/ruby-link-checker/pull/24): Added transient-only retries, opt-in retry delays/backoff/jitter and `Retry-After` handling, transport error categories, and an Async concurrency limit - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#25](https://github.com/dblock/ruby-link-checker/pull/25): Added opt-in URL deduplication and atomic TTL-based success caching, preserving per-submission metadata and query values - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
