@@ -1,3 +1,7 @@
+### 0.5.1 (Next)
+
+* Your contribution here.
+
 ### 0.5.0 (2026/11/07)
 
 * [#27](https://github.com/dblock/ruby-link-checker/pull/27): Avoided duplicate test and lint runs by checking pull requests and pushes to `main` only - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
