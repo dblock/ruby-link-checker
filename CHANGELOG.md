@@ -1,9 +1,8 @@
-### 0.5.1 (Next)
+### 0.5.1 (2026/11/08)
 
 * [#30](https://github.com/dblock/ruby-link-checker/pull/30): Updated ruby-gem-release to 0.3.1 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#29](https://github.com/dblock/ruby-link-checker/pull/29): Removed accidentally tracked Bundler artifacts, ignored local Bundler configuration and installed gems, and restricted gem packaging to tracked files - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#28](https://github.com/dblock/ruby-link-checker/pull/28): Updated ruby-gem-release to 0.3.0 and removed the unsupported dry-run release input and instructions - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
-* Your contribution here.
 
 ### 0.5.0 (2026/11/07)
 
