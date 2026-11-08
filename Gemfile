@@ -17,7 +17,7 @@ group :development, :test do
   gem 'rubocop', '~> 1.0'
   gem 'rubocop-rake'
   gem 'rubocop-rspec'
-  gem 'ruby-gem-release', '~> 0.2.0', require: false
+  gem 'ruby-gem-release', '~> 0.3.0', require: false
   gem 'vcr'
   gem 'webmock'
 end

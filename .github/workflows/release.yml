@@ -2,11 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      dry-run:
-        description: Validate and build without publishing or pushing.
-        type: boolean
-        default: true
 
 permissions:
   contents: write
@@ -14,7 +9,6 @@ permissions:
 
 jobs:
   release:
-    uses: dblock/ruby-gem-release/.github/workflows/release.yml@v0.2.0
+    uses: dblock/ruby-gem-release/.github/workflows/release.yml@v0.3.0
     with:
       ruby-version: '3.3'
-      dry-run: ${{ inputs.dry-run }}

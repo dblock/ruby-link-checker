@@ -2,7 +2,7 @@
 
 There are no hard rules about when to release ruby-link-checker. Release bug fixes frequently, features not so frequently and breaking API changes rarely.
 
-Releases use [ruby-gem-release](https://github.com/dblock/ruby-gem-release/tree/v0.2.0) and the manual [Release workflow](.github/workflows/release.yml). Merges do not publish, and dispatches default to dry-run mode.
+Releases use [ruby-gem-release](https://github.com/dblock/ruby-gem-release/tree/v0.3.0) and the manual [Release workflow](.github/workflows/release.yml). Merges do not publish. Every workflow dispatch performs a real release.
 
 ## One-Time Setup
 
@@ -16,18 +16,16 @@ The workflow requests `contents: write` and `id-token: write`. Branch rules must
 
 Prepare the intended version in `lib/ruby-link-checker/version.rb` and its matching `### VERSION (Next)` section in `CHANGELOG.md` through a PR. Keep exactly one `* Your contribution here.` placeholder in that section. The workflow releases the current version, dates the changelog, and removes the placeholder; it does not select a new release version.
 
-After merging, run a dry run from `main`:
+Run tests and RuboCop locally and review the release changes before merging:
 
 ```sh
-gh workflow run release.yml --ref main -f dry-run=true
+bundle exec rake
 ```
 
-Review the run's validation results and artifacts before authorizing publication. Dry runs exercise local commits, tags, and gem builds in the runner, without uploading the gem, pushing Git history, or creating a GitHub Release.
-
-After explicit release approval and successful Trusted Publishing setup:
+After merging, explicit release approval, and successful Trusted Publishing setup, dispatch from `main`:
 
 ```sh
-gh workflow run release.yml --ref main -f dry-run=false
+gh workflow run release.yml --ref main
 ```
 
 The workflow runs `bundle exec rake`, publishes the verified gem to RubyGems, pushes the release commit and tag atomically, and creates a GitHub Release with the gem attached. It then increments the patch version and pushes a new development commit with a fresh changelog section. Actions-token pushes do not trigger ordinary push workflows, so the release workflow runs tests and RuboCop before publication.
@@ -36,4 +34,4 @@ The workflow runs `bundle exec rake`, publishes the verified gem to RubyGems, pu
 
 Verify the published RubyGems version, matching tag and GitHub Release, attached gem, and next development version on `main`.
 
-Never automatically rerun a failed or timed-out publication: RubyGems may have accepted the upload. Check registry and GitHub state first. Do not republish an existing version or move its tag. Available `release.gem`, `release.json`, and `release.bundle` recovery artifacts are retained for 30 days; follow the [upstream recovery instructions](https://github.com/dblock/ruby-gem-release/blob/v0.2.0/RELEASING.md#verify-and-recover) to complete only the missing steps.
+Never automatically rerun a failed or timed-out publication: RubyGems may have accepted the upload. Check registry and GitHub state first. Do not republish an existing version or move its tag. Available `release.gem`, `release.json`, and `release.bundle` recovery artifacts are retained for 30 days; follow the [upstream recovery instructions](https://github.com/dblock/ruby-gem-release/blob/v0.3.0/RELEASING.md#verify-and-recover) to complete only the missing steps.

@@ -122,7 +122,7 @@ It's likely that your change will not be merged and that the nitpicky maintainer
 
 ## Releases
 
-See [RELEASING.md](RELEASING.md) for the manual release workflow, dry runs, and one-time Trusted Publishing setup.
+See [RELEASING.md](RELEASING.md) for the manual release workflow and one-time Trusted Publishing setup.
 
 ## Thank You
 
