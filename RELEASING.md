@@ -2,7 +2,7 @@
 
 There are no hard rules about when to release ruby-link-checker. Release bug fixes frequently, features not so frequently and breaking API changes rarely.
 
-Releases use [ruby-gem-release](https://github.com/dblock/ruby-gem-release/tree/v0.3.0) and the manual [Release workflow](.github/workflows/release.yml). Merges do not publish. Every workflow dispatch performs a real release.
+Releases use [ruby-gem-release](https://github.com/dblock/ruby-gem-release/tree/v0.3.1) and the manual [Release workflow](.github/workflows/release.yml). Merges do not publish. Every workflow dispatch performs a real release.
 
 ## One-Time Setup
 
@@ -34,4 +34,4 @@ The workflow runs `bundle exec rake`, publishes the verified gem to RubyGems, pu
 
 Verify the published RubyGems version, matching tag and GitHub Release, attached gem, and next development version on `main`.
 
-Never automatically rerun a failed or timed-out publication: RubyGems may have accepted the upload. Check registry and GitHub state first. Do not republish an existing version or move its tag. Available `release.gem`, `release.json`, and `release.bundle` recovery artifacts are retained for 30 days; follow the [upstream recovery instructions](https://github.com/dblock/ruby-gem-release/blob/v0.3.0/RELEASING.md#verify-and-recover) to complete only the missing steps.
+Never automatically rerun a failed or timed-out publication: RubyGems may have accepted the upload. Check registry and GitHub state first. Do not republish an existing version or move its tag. Available `release.gem`, `release.json`, and `release.bundle` recovery artifacts are retained for 30 days; follow the [upstream recovery instructions](https://github.com/dblock/ruby-gem-release/blob/v0.3.1/RELEASING.md#verify-and-recover) to complete only the missing steps.
