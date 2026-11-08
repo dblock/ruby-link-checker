@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.platform = Gem::Platform::RUBY
   s.required_rubygems_version = '>= 1.3.6'
   s.required_ruby_version = '>= 3.3'
-  s.files = Dir['**/*']
+  s.files = IO.popen(%w[git ls-files -z], &:read).split("\0")
   s.require_paths = ['lib']
   s.homepage = 'http://github.com/dblock/ruby-link-checker'
   s.licenses = ['MIT']
