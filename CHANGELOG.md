@@ -1,5 +1,6 @@
 ### 0.5.2 (Next)
 
+* [#31](https://github.com/dblock/ruby-link-checker/pull/31): Updated ruby-gem-release to 0.5.0 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * Your contribution here.
 
 ### 0.5.1 (2026/11/08)
