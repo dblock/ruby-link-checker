@@ -15,6 +15,7 @@
 * [#51](https://github.com/dblock/ruby-link-checker/pull/51): Added `result.outcome`, a stable `result.reason`, and a serializable `result.to_h` - [@dblock](https://github.com/dblock).
 * [#52](https://github.com/dblock/ruby-link-checker/pull/52): Added cache pruning with `cache: { prune: true }` and `checker.prune_cache!` to remove entries for links that are no longer checked - [@dblock](https://github.com/dblock).
 * [#53](https://github.com/dblock/ruby-link-checker/pull/53): Packaged only the library and its documentation, disabled the local Bundler `rake release` tasks, pinned the release workflow to a commit, updated `actions/checkout`, and removed the `git` pin now that Danger supports git 6 - [@dblock](https://github.com/dblock).
+* [#54](https://github.com/dblock/ruby-link-checker/pull/54): Added UPGRADING.md with instructions for upgrading to 0.6.0 - [@dblock](https://github.com/dblock).
 * Your contribution here.
 
 ### 0.5.1 (2026/11/08)
