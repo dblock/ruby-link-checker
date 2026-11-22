@@ -9,6 +9,7 @@ module LinkChecker
     def initialize(checker, task_klass, uri, methods, options = {})
       @uri = uri
       @retries_left = checker.retries
+      @rate_limit_retries_left = checker.rate_limit_retries
       @retry_count = 0
       @methods_left = methods.dup
       @methods = methods.dup
@@ -26,7 +27,12 @@ module LinkChecker
     end
 
     def execute!
-      if retry?
+      if rate_limit_retry?
+        @rate_limit_retries_left -= 1
+        checker._rate_limit!(checker._host_key(@result.result_uri), @result)
+        retry! @result
+        _queue_task(uri, method, original_uri || uri, options)
+      elsif retry?
         @retries_left -= 1
         @retry_count += 1
         retry! @result
@@ -69,6 +75,10 @@ module LinkChecker
       !first_time? && retries_left > 0 && retryable?
     end
 
+    def rate_limit_retry?
+      !first_time? && @rate_limit_retries_left.positive? && result && checker.rate_limited?(result)
+    end
+
     def retryable?
       return false unless result
       return result.error? || result.failure? if checker.retry_status_codes.nil?
@@ -79,19 +89,9 @@ module LinkChecker
 
     def _retry_delay
       delay = checker.retry_after.zero? ? 0 : checker.retry_after * (checker.retry_backoff**(@retry_count - 1))
-      delay = [delay, _server_retry_delay].max if checker.respect_retry_after
+      delay = [delay, result.retry_after_delay].max if checker.respect_retry_after
       delay *= 1 + (rand * checker.retry_jitter) if checker.retry_jitter.positive?
       [delay, checker.max_retry_delay].min
-    end
-
-    def _server_retry_delay
-      headers = result.response_headers
-      value = Array(headers['Retry-After'] || headers['retry-after']).first.to_s.strip
-      return value.to_i if /\A\d+\z/.match?(value)
-
-      [Time.httpdate(value) - Time.now, 0].max
-    rescue ArgumentError
-      0
     end
 
     def _queue_task(uri, method, original_uri, options = {}, delay: 0)
@@ -120,8 +120,12 @@ module LinkChecker
       @result = result
       result.redirects = @hops.dup.freeze unless result.redirect?
       retry_text = " (#{_retries_left_s})" if retry? && (result.error? || result.failure?)
+      retry_text = ' (rate limited)' if !first_time? && @rate_limit_retries_left.positive? && checker.rate_limited?(result)
       logger.info "#{' ' * (redirects.count - 1)}#{result}#{retry_text}"
       result! result
+      unless result.error? || checker.rate_limited?(result)
+        checker._rate_limit_reset!(checker._host_key(result.result_uri))
+      end
       if result.redirect?
         redirect! result
         redirected_to_uri = URI.join(result.result_uri, result.redirect_to)

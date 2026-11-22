@@ -64,6 +64,23 @@ describe LinkChecker::Config do
         end
       end
 
+      context 'rate limiting' do
+        it 'validates retries' do
+          expect { LinkChecker.config.rate_limit_retries = -1 }.to raise_error ArgumentError, /rate limit retries/
+        end
+
+        it 'validates status codes' do
+          expect { LinkChecker.config.rate_limit_status_codes = [1000] }.to raise_error ArgumentError, /rate limit status/
+          LinkChecker.config.rate_limit_status_codes = nil
+          expect(LinkChecker.config.rate_limit_status_codes).to eq []
+        end
+
+        it 'validates delays' do
+          expect { LinkChecker.config.rate_limit_backoff = -1 }.to raise_error ArgumentError, /rate_limit_backoff/
+          expect { LinkChecker.config.max_rate_limit_delay = Float::NAN }.to raise_error ArgumentError, /max_rate_limit/
+        end
+      end
+
       context 'max_concurrency_per_host' do
         it 'requires a positive integer' do
           message = 'Invalid concurrency limit per host: 0'
@@ -101,6 +118,12 @@ describe LinkChecker::Config do
     end
     it 'blocks status codes that bot protection commonly returns' do
       expect(LinkChecker.config.blocked_status_codes).to eq [401, 403, 429, 999]
+    end
+    it 'backs off on rate limits' do
+      expect(LinkChecker.config.rate_limit_retries).to eq 2
+      expect(LinkChecker.config.rate_limit_status_codes).to eq [429]
+      expect(LinkChecker.config.rate_limit_backoff).to eq 1
+      expect(LinkChecker.config.max_rate_limit_delay).to eq 30
     end
     it 'does not limit concurrency per host' do
       expect(LinkChecker.config.max_concurrency_per_host).to be_nil

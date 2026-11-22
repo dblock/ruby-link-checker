@@ -34,6 +34,16 @@ module LinkChecker
       false
     end
 
+    # Seconds the server asked to wait with Retry-After (delta-seconds or an HTTP date), or 0.
+    def retry_after_delay
+      value = Array(response_headers['Retry-After'] || response_headers['retry-after']).first.to_s.strip
+      return value.to_i if /\A\d+\z/.match?(value)
+
+      [Time.httpdate(value) - Time.now, 0].max
+    rescue ArgumentError
+      0
+    end
+
     # Whether the response carries a known bot challenge.
     # Cloudflare sets cf-mitigated: challenge on every challenge page.
     # https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/

@@ -7,6 +7,7 @@
 * [#42](https://github.com/dblock/ruby-link-checker/pull/42): Added `host_headers` to send headers to specific hosts, chosen per redirect hop so that credentials are not forwarded to other hosts - [@dblock](https://github.com/dblock).
 * [#43](https://github.com/dblock/ruby-link-checker/pull/43): Added `result.redirects` and `result.permanent_redirect?` with the redirect hops that led to a final result, persisted in the cache - [@dblock](https://github.com/dblock).
 * [#44](https://github.com/dblock/ruby-link-checker/pull/44): Added an optional `blocked_ttl` cache setting to reuse blocked results for a shorter period than successes - [@dblock](https://github.com/dblock).
+* [#46](https://github.com/dblock/ruby-link-checker/pull/46): Added per-host exponential backoff for rate-limited (429) responses with `rate_limit_retries` (default `2`, `0` disables), `rate_limit_backoff`, `max_rate_limit_delay`, and `rate_limit_status_codes`, honoring `Retry-After` - [@dblock](https://github.com/dblock).
 * Your contribution here.
 
 ### 0.5.1 (2026/11/08)

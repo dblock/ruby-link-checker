@@ -22,6 +22,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [Redirects](#redirects)
     - [Retry After](#retry-after)
     - [Retry Policy](#retry-policy)
+    - [Rate Limits](#rate-limits)
     - [Blocked Results](#blocked-results)
     - [Per-Host Limits](#per-host-limits)
     - [Results](#results)
@@ -230,7 +231,7 @@ end
 
 #### Retries
 
-By default link checkers do not retry. Set `retries` to enable retries for transient connection errors/timeouts and HTTP statuses 408, 425, 429, 500, 502, 503, and 504. Permanent HTTP failures and invalid URLs are not retried. HEAD-to-GET fallback still applies independently of the retry policy. The retry budget is shared across methods: with `retries: 2`, repeated transient failures produce `HEAD`, `HEAD`, `HEAD`, then `GET`.
+By default link checkers only retry [rate-limited responses](#rate-limits). Set `retries` to enable retries for transient connection errors/timeouts and HTTP statuses 408, 425, 429, 500, 502, 503, and 504. Permanent HTTP failures and invalid URLs are not retried. HEAD-to-GET fallback still applies independently of the retry policy. The retry budget is shared across methods: with `retries: 2`, repeated transient failures produce `HEAD`, `HEAD`, `HEAD`, then `GET`.
 
 ```ruby
 checker = LinkChecker::Net::HTTP::Checker.new(retries: 1)
@@ -276,6 +277,23 @@ Customize `retry_status_codes` to choose retryable HTTP statuses. Set it to `nil
 ```ruby
 checker = LinkChecker::Net::HTTP::Checker.new(retries: 1, retry_status_codes: [429, 503])
 ```
+
+#### Rate Limits
+
+Rate-limited responses (429 Too Many Requests) are retried with exponential backoff per host, on their own budget, independently of `retries`. A rate-limited response pauses every later request to the same host, not just the retried one, for `rate_limit_backoff` seconds (default `1`), doubling with each further rate-limited response from that host (1s, 2s, 4s, ...). A `Retry-After` header that asks for longer is honored, and every pause is capped at `max_rate_limit_delay` seconds (default `30`). Rate-limited responses that arrive while the host is already paused, such as the rest of a burst, don't increase the backoff, and any response from the host that isn't rate limited resets it.
+
+Each link is retried up to `rate_limit_retries` times (default `2`) when rate limited. After that, the general [retry policy](#retry-policy) applies, and a link that's still rate limited is reported as [blocked](#blocked-results) (or failed if 429 isn't in `blocked_status_codes`). Set `rate_limit_retries: 0` to disable rate limit backoff entirely.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(
+  rate_limit_retries: 3,
+  rate_limit_backoff: 2,
+  max_rate_limit_delay: 60,
+  rate_limit_status_codes: [429, 503]
+)
+```
+
+Use `rate_limit_status_codes` (default `[429]`) to treat other statuses, such as 503, as rate limits. Pauses use the same per-host scheduling as [per-host limits](#per-host-limits): Hydra holds back requests to a paused host until the active batch drains, but can't recall requests it already started, so combine rate limit backoff with `max_concurrency_per_host` to keep bursts small. Rate limit retries publish `:retry` like other retries.
 
 #### Blocked Results
 

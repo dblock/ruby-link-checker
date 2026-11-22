@@ -14,6 +14,45 @@ describe LinkChecker::Checker do
     end
   end
 
+  describe 'rate limit backoff' do
+    let(:checker) { LinkChecker::Net::HTTP::Checker.new(rate_limit_backoff: 1, max_rate_limit_delay: 30) }
+    let(:result) { LinkChecker::Net::HTTP::Result.new(URI('https://www.example.org/'), 'GET', nil, nil, response, {}) }
+    let(:response) { Net::HTTPTooManyRequests.new('1.1', '429', 'Too Many Requests') }
+
+    it 'pauses the rate limited host only' do
+      expect(checker._rate_limit!('www.example.org', result)).to eq 1
+      expect(checker._host_wait('www.example.org')).to be > 0.9
+      expect(checker._host_wait('www.example.com')).to eq 0
+    end
+
+    it 'doubles the pause once the previous pause has elapsed' do
+      checker._rate_limit!('www.example.org', result)
+      checker.instance_variable_get(:@host_next_start)['www.example.org'] = 0
+      expect(checker._rate_limit!('www.example.org', result)).to eq 2
+    end
+
+    it 'does not escalate while the host is paused' do
+      checker._rate_limit!('www.example.org', result)
+      expect(checker._rate_limit!('www.example.org', result)).to eq 1
+    end
+
+    it 'resets after a response that is not rate limited' do
+      checker._rate_limit!('www.example.org', result)
+      checker._rate_limit_reset!('www.example.org')
+      checker.instance_variable_get(:@host_next_start)['www.example.org'] = 0
+      expect(checker._rate_limit!('www.example.org', result)).to eq 1
+    end
+
+    it 'honors Retry-After up to the cap' do
+      response['Retry-After'] = '120'
+      expect(checker._rate_limit!('www.example.org', result)).to eq 30
+    end
+
+    it 'ignores URIs without a host' do
+      expect(checker._rate_limit!(nil, result)).to eq 0
+    end
+  end
+
   describe 'per-host slots' do
     let(:checker) { LinkChecker::Net::HTTP::Checker.new(min_host_interval: 10) }
 

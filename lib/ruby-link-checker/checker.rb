@@ -11,6 +11,7 @@ module LinkChecker
     # Settings that do not change the request or response, excluded from request identity.
     IDENTITY_EXCLUDED_ATTRIBUTES = %i[
       logger cache deduplicate blocked_status_codes detect_challenges max_concurrency_per_host min_host_interval
+      rate_limit_retries rate_limit_status_codes rate_limit_backoff max_rate_limit_delay
     ].freeze
 
     attr_reader :results
@@ -25,6 +26,7 @@ module LinkChecker
       @pending = {}
       @successful = {}
       @host_next_start = {}
+      @host_backoff = Hash.new(0)
       @cache_store = Cache.new(cache, logger: @logger) if cache
     end
 
@@ -92,18 +94,44 @@ module LinkChecker
 
     # Seconds to wait before the next request to host may start, without reserving it.
     def _host_wait(host)
-      return 0 unless host && min_host_interval.positive? && @host_next_start[host]
+      return 0 unless host && @host_next_start[host]
 
       [@host_next_start[host] - _monotonic_time, 0].max
     end
 
     # Reserves the next start for host, spaced by min_host_interval, and returns the seconds to wait for it.
     def _reserve_host_slot(host)
-      return 0 unless host && min_host_interval.positive?
+      return 0 unless host
 
       wait = _host_wait(host)
-      @host_next_start[host] = _monotonic_time + wait + min_host_interval
+      @host_next_start[host] = _monotonic_time + wait + min_host_interval if min_host_interval.positive?
       wait
+    end
+
+    # Whether a response should be retried with per-host rate limit backoff.
+    def rate_limited?(result)
+      rate_limit_retries.positive? && !result.error? && rate_limit_status_codes.include?(result.code)
+    end
+
+    # Pauses every request to host after a rate limited result and returns the pause in seconds.
+    # The pause doubles with each rate limited response from host, starting at rate_limit_backoff,
+    # but rate limited responses that arrive while host is already paused don't escalate it.
+    # Retry-After is honored as a minimum, and every pause is capped at max_rate_limit_delay.
+    def _rate_limit!(host, result)
+      return 0 unless host
+
+      @host_backoff[host] += 1 unless _host_wait(host).positive? && @host_backoff[host].positive?
+      delay = rate_limit_backoff * (2**(@host_backoff[host] - 1))
+      delay = [delay, result.retry_after_delay].max
+      delay = [delay, max_rate_limit_delay].min
+      @host_next_start[host] = [@host_next_start[host] || 0, _monotonic_time + delay].max
+      logger.info "Rate limited by #{host}, pausing requests for #{delay.round(2)}s"
+      delay
+    end
+
+    # Resets the backoff of host after a response that isn't rate limited.
+    def _rate_limit_reset!(host)
+      @host_backoff.delete(host) if host
     end
 
     private

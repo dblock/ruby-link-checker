@@ -24,6 +24,10 @@ module LinkChecker
       cache
       max_concurrency_per_host
       min_host_interval
+      rate_limit_retries
+      rate_limit_status_codes
+      rate_limit_backoff
+      max_rate_limit_delay
     ].freeze
 
     attr_accessor(*Config::ATTRIBUTES)
@@ -48,6 +52,10 @@ module LinkChecker
       self.cache = nil
       self.max_concurrency_per_host = nil
       self.min_host_interval = 0
+      self.rate_limit_retries = 2
+      self.rate_limit_status_codes = [429]
+      self.rate_limit_backoff = 1
+      self.max_rate_limit_delay = 30
     end
 
     def host_headers=(value)
@@ -122,6 +130,30 @@ module LinkChecker
     def min_host_interval=(value)
       validate_number!(:min_host_interval, value, 0)
       @min_host_interval = value
+    end
+
+    def rate_limit_retries=(value)
+      raise ArgumentError, "Invalid number of rate limit retries: #{value}" unless value.is_a?(Integer) && value >= 0
+
+      @rate_limit_retries = value
+    end
+
+    def rate_limit_status_codes=(value)
+      unless value.nil? || (value.is_a?(Array) && value.all? { |code| code.is_a?(Integer) && code.between?(100, 999) })
+        raise ArgumentError, "Invalid rate limit status codes: #{value}"
+      end
+
+      @rate_limit_status_codes = value&.dup || []
+    end
+
+    def rate_limit_backoff=(value)
+      validate_number!(:rate_limit_backoff, value, 0)
+      @rate_limit_backoff = value
+    end
+
+    def max_rate_limit_delay=(value)
+      validate_number!(:max_rate_limit_delay, value, 0)
+      @max_rate_limit_delay = value
     end
 
     def max_retry_delay=(value)
