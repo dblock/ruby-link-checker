@@ -378,7 +378,7 @@ checker.check('https://www.example.org', location: 'two.html')
 checker.run # one check, two sets of result events
 ```
 
-Identity includes the complete URL (including query values and fragment), transport, methods, headers, host headers, user-agent, and request-related settings. Changing those settings prevents reuse. URLs containing user-info credentials bypass deduplication and caching.
+Identity includes the URL with its query values, but not its `#fragment`, which is never sent to the server, so links that differ only by fragment share one check. Each submission's results still report its own URL, fragment included. Identity also includes the transport, methods, headers, host headers, user-agent, and request-related settings. Changing those settings prevents reuse. URLs containing user-info credentials bypass deduplication and caching.
 
 #### Caching
 

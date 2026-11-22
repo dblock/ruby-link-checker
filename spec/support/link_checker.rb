@@ -166,6 +166,16 @@ shared_context 'a link checker' do
       expect(checker.results[:success].size).to eq(1)
     end
 
+    it 'shares one check between links that differ only by fragment' do
+      stub_request(:any, url).to_return(status: 200)
+      checker.check("#{url}#one", location: 'one.html')
+      checker.check("#{url}#two", location: 'two.html')
+      checker.run if checker.respond_to?(:run)
+      expect(a_request(:any, url)).to have_been_made.once
+      expect(checker.results[:success].map { |result| result.uri.fragment }).to eq %w[one two]
+      expect(checker.results[:success].map { |result| result.result_uri.fragment }).to eq %w[one two]
+    end
+
     it 'keeps query values distinct' do
       stub_request(:any, "#{url}?id=1").to_return(status: 200)
       stub_request(:any, "#{url}?id=2").to_return(status: 404)
@@ -225,6 +235,17 @@ shared_context 'a link checker' do
       next_checker.run if next_checker.respond_to?(:run)
       expect(next_checker.results[:success].first.cached?).to be true
       expect(next_checker.results[:success].first.options).to eq(location: 'two.html')
+      expect(a_request(:any, url)).to have_been_made.once
+    end
+
+    it 'reuses a cached success for another fragment of the same URL' do
+      stub_request(:any, url).to_return(status: 200)
+      checker.check("#{url}#one")
+      checker.run if checker.respond_to?(:run)
+      next_checker.check("#{url}#two")
+      next_checker.run if next_checker.respond_to?(:run)
+      result = next_checker.results[:success].first
+      expect([result.cached?, result.uri.fragment, result.result_uri.fragment]).to eq [true, 'two', 'two']
       expect(a_request(:any, url)).to have_been_made.once
     end
 
