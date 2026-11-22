@@ -11,6 +11,16 @@ describe LinkChecker::ResultError do
     expect(result.error?).to be true
   end
 
+  it 'explains other errors with their class' do
+    expect(result.reason).to eq 'Error (StandardError)'
+    expect(result.to_h.values_at(:outcome, :code, :error)).to eq [:error, nil, 'oops']
+  end
+
+  it 'explains connection errors' do
+    result.error = Errno::ECONNREFUSED.new
+    expect(result.reason).to eq 'Connection error'
+  end
+
   it 'returns the error class name as code' do
     expect(result.code).to eq 'StandardError'
   end

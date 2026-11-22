@@ -521,6 +521,20 @@ Events are called with results, which contain the following properties.
 | :redirects        | The redirect hops that led to this result, see [Redirects](#redirects). |
 | :permanent_redirect? | Whether any of those hops was a permanent redirect (301 or 308). |
 
+| :outcome          | `:success`, `:failure`, `:blocked`, or `:error` for a final result, `:redirect` for a redirect hop. |
+| :reason           | A stable explanation of the outcome, see below.                  |
+| :to_h             | A serializable summary of the result, see below.                 |
+
+`result.reason` is one of `HTTP <status>` (such as `HTTP 404` or `HTTP 403`), `<name> challenge (HTTP <status>)` for an unsuccessful response that carries a known bot challenge (such as `Cloudflare challenge (HTTP 403)`), `Timeout`, `Connection error`, `Redirect loop`, `Too many redirects`, `Invalid URL`, or `Error (<class name>)` for other errors.
+
+`result.to_h` returns a hash with the `url`, `result_url`, `method`, `code` (an integer, or `nil` for errors), `outcome`, `reason`, `redirects` (each with `url`, `code`, and `to`), `permanent_redirect`, `blocked`, `challenge` (the name of a detected bot challenge, such as `Cloudflare`, or `nil`), `cached`, `error` (the error message), `error_type`, and the `options` passed to `check`. It's suitable for JSON reports when those options are.
+
+```ruby
+checker.on :complete do |result|
+  puts JSON.generate(result.to_h) unless result.success?
+end
+```
+
 See [result.rb](lib/ruby-link-checker/result.rb) for more details.
 
 ## Benchmarks
