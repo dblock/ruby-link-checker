@@ -84,15 +84,7 @@ module LinkChecker
     # Request headers for uri: the user-agent, then global headers, then every matching host_headers entry.
     # Later values replace earlier ones with the same case-insensitive name.
     def request_headers_for(uri)
-      host = _host_key(uri)
-      sources = [{ 'User-Agent' => user_agent }, headers]
-      sources += host_headers.filter_map { |pattern, values| values if host && _host_match?(pattern, host) }
-      sources.each_with_object({}) do |values, merged|
-        values.each do |name, value|
-          merged.delete_if { |existing, _value| existing.casecmp?(name.to_s) }
-          merged[name.to_s] = value
-        end
-      end
+      _merge_headers([{ 'User-Agent' => user_agent }, headers] + _matching_host_headers(uri))
     end
 
     # The host that per-host limits apply to, or nil when the URI has none.
@@ -150,9 +142,21 @@ module LinkChecker
       prune_cache! if @cache_store&.prune?
     end
 
-    def _host_headers_identity
-      host_headers.map do |pattern, values|
-        [pattern.is_a?(Regexp) ? pattern.inspect : pattern, values.sort_by { |key, _value| key.to_s }]
+    # The host_headers values that apply to uri, in configuration order.
+    def _matching_host_headers(uri)
+      host = _host_key(uri)
+      return [] unless host
+
+      host_headers.filter_map { |pattern, values| values if _host_match?(pattern, host) }
+    end
+
+    # Merges header hashes in order; later values replace earlier ones with the same case-insensitive name.
+    def _merge_headers(sources)
+      sources.each_with_object({}) do |values, merged|
+        values.each do |name, value|
+          merged.delete_if { |existing, _value| existing.casecmp?(name.to_s) }
+          merged[name.to_s] = value
+        end
       end
     end
 
@@ -226,9 +230,9 @@ module LinkChecker
       attributes = Config::ATTRIBUTES - IDENTITY_EXCLUDED_ATTRIBUTES
       attributes += %i[timeout connecttimeout read_timeout open_timeout protocol].select { |key| respond_to?(key) }
       settings = attributes.to_h { |key| [key, send(key)] }
-      settings[:headers] = headers.sort_by { |key, _value| key.to_s }
+      # Only the headers sent for this URL are part of its identity, so changing the headers of other hosts keeps it.
+      settings[:headers] = _merge_headers([headers] + _matching_host_headers(parsed)).sort_by { |key, _value| key }
       settings.delete(:host_headers)
-      settings[:host_headers] = _host_headers_identity if host_headers.any?
       Digest::SHA256.hexdigest(JSON.generate([task_klass.name, parsed.to_s, settings]))
     rescue URI::InvalidURIError, JSON::GeneratorError, TypeError
       nil

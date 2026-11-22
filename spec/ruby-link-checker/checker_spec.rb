@@ -5,12 +5,38 @@ describe LinkChecker::Checker do
   describe 'request identity' do
     let(:checker) { LinkChecker::Net::HTTP::Checker.new }
 
-    it 'does not change when host headers are empty' do
-      key = checker.send(:request_key, 'https://www.example.org/')
+    def key(url = 'https://www.example.org/')
+      checker.send(:request_key, url)
+    end
+
+    it 'does not change with host headers for other hosts' do
+      before = key
+      checker.host_headers = { 'crates.io' => { 'Accept' => 'text/html' }, /\.example\.com\z/ => { 'DNT' => '1' } }
+      expect(key).to eq before
+    end
+
+    it 'does not change when matching host headers add nothing' do
+      before = key
       checker.host_headers = { 'www.example.org' => {} }
-      expect(checker.send(:request_key, 'https://www.example.org/')).not_to eq key
-      checker.host_headers = {}
-      expect(checker.send(:request_key, 'https://www.example.org/')).to eq key
+      expect(key).to eq before
+    end
+
+    it 'changes with the headers sent for the URL' do
+      before = key
+      checker.host_headers = { 'www.example.org' => { 'Accept' => 'text/html' } }
+      changed = key
+      checker.host_headers = { /example\.org\z/ => { 'Accept' => 'text/html' } }
+      expect([changed, key].uniq).to eq [changed]
+      expect(changed).not_to eq before
+    end
+
+    it 'treats a host header that repeats a global header as the same request' do
+      checker.headers = { 'Accept' => 'text/html' }
+      before = key
+      checker.host_headers = { 'www.example.org' => { 'accept' => 'text/html' } }
+      expect(key).not_to eq before
+      checker.host_headers = { 'www.example.org' => { 'Accept' => 'text/html' } }
+      expect(key).to eq before
     end
   end
 
