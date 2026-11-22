@@ -274,7 +274,7 @@ shared_context 'a link checker' do
       run_check
       expect(checker.results[:blocked].first.to_s).to include('BLOCKED (403)')
       expect(checker.results[:failure]).to be_empty
-      expect(events.map(&:first)).to eq(%i[result result blocked])
+      expect(events.map(&:first)).to eq(%i[result result blocked complete])
     end
 
     it 'reports a failure when GET returns a status that is not blocked' do
@@ -306,7 +306,7 @@ shared_context 'a link checker' do
         stub_request(:get, url).to_return(status: 429)
         run_check
         expect(a_request(:get, url)).to have_been_made.twice
-        expect(events.map(&:first)).to eq(%i[result retry result blocked])
+        expect(events.map(&:first)).to eq(%i[result retry result blocked complete])
       end
 
       it 'reports success when a retry succeeds' do
@@ -394,6 +394,118 @@ shared_context 'a link checker' do
       run_check
       expect(checker.results[:error].size).to eq 1
       expect(checker.results[:blocked]).to be_empty
+    end
+  end
+
+  context 'event order', :aggregate_failures do
+    let(:checker_options) { { methods: ['GET'] } }
+    let(:checker) { described_class.new(checker_options) }
+    let(:url) { 'https://www.example.org/events' }
+    let(:events) { [] }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    before do
+      checker.on { |event, result| events << [event, result.method, result.code] }
+    end
+
+    def run_check
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+    end
+
+    it 'publishes a result per redirect hop and one outcome for a redirect chain' do
+      stub_request(:get, url).to_return(status: 301, headers: { 'Location' => '/next' })
+      stub_request(:get, 'https://www.example.org/next').to_return(status: 302, headers: { 'Location' => '/final' })
+      stub_request(:get, 'https://www.example.org/final').to_return(status: 200)
+      run_check
+      expect(events.map { |event, _method, code| [event, code] }).to eq(
+        [[:result, 301], [:redirect, 301], [:result, 302], [:redirect, 302]] +
+        [[:result, 200], [:success, 200], [:complete, 200]]
+      )
+    end
+
+    context 'with HEAD and GET' do
+      let(:checker_options) { { methods: %w[HEAD GET] } }
+
+      it 'publishes a result per method and one outcome for a fallback' do
+        stub_request(:head, url).to_return(status: 405)
+        stub_request(:get, url).to_return(status: 200)
+        run_check
+        expect(events).to eq(
+          [[:result, 'HEAD', 405], [:result, 'GET', 200], [:success, 'GET', 200], [:complete, 'GET', 200]]
+        )
+      end
+
+      it 'publishes the documented events for a redirect followed by a fallback' do
+        stub_request(:any, url).to_return(status: 301, headers: { 'Location' => '/moved' })
+        stub_request(:head, 'https://www.example.org/moved').to_return(status: 405)
+        stub_request(:get, 'https://www.example.org/moved').to_return(status: 200)
+        run_check
+        expect(events).to eq(
+          [[:result, 'HEAD', 301], [:redirect, 'HEAD', 301], [:result, 'HEAD', 405]] +
+          [[:result, 'GET', 301], [:redirect, 'GET', 301], [:result, 'GET', 200]] +
+          [[:success, 'GET', 200], [:complete, 'GET', 200]]
+        )
+      end
+
+      it 'publishes one failure when both methods fail' do
+        stub_request(:any, url).to_return(status: 404)
+        run_check
+        expect(events).to eq(
+          [[:result, 'HEAD', 404], [:result, 'GET', 404], [:failure, 'GET', 404], [:complete, 'GET', 404]]
+        )
+      end
+    end
+
+    context 'with retries' do
+      let(:checker_options) { { methods: ['GET'], retries: 1 } }
+
+      it 'publishes a retry between attempts' do
+        stub_request(:get, url).to_return({ status: 503 }, { status: 200 })
+        run_check
+        expect(events.map(&:first)).to eq(%i[result retry result success complete])
+      end
+    end
+
+    it 'publishes complete once for an error' do
+      stub_request(:get, url).to_timeout
+      run_check
+      expect(events.map(&:first)).to eq(%i[result error complete])
+    end
+
+    it 'publishes complete once for a blocked result' do
+      checker.blocked_status_codes = [403]
+      stub_request(:get, url).to_return(status: 403)
+      run_check
+      expect(events.map(&:first)).to eq(%i[result blocked complete])
+    end
+
+    it 'does not collect complete events in results' do
+      stub_request(:get, url).to_return(status: 200)
+      run_check
+      expect(checker.results.keys).to eq(%i[error failure success blocked])
+    end
+
+    context 'with a persistent cache' do
+      let(:directory) { Dir.mktmpdir('link-checker-spec-') }
+      let(:checker_options) { { methods: ['GET'], cache: { file: File.join(directory, 'cache.json'), ttl: 60 } } }
+
+      after do
+        FileUtils.remove_entry(directory)
+      end
+
+      it 'publishes result, success, and complete for a cache hit' do
+        stub_request(:get, url).to_return(status: 200)
+        described_class.new(checker_options).tap do |first_checker|
+          first_checker.check(url)
+          first_checker.run if first_checker.respond_to?(:run)
+        end
+        run_check
+        expect(events.map(&:first)).to eq(%i[result success complete])
+      end
     end
   end
 

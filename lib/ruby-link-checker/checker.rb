@@ -93,8 +93,10 @@ module LinkChecker
 
     def publish(event, result)
       result.checker = self
-      results[event] << result if @results && OUTCOME_EVENTS.include?(event)
+      outcome = OUTCOME_EVENTS.include?(event)
+      results[event] << result if @results && outcome
       callback(event, result)
+      callback(:complete, result) if outcome
     end
 
     def handle_shared_result(key, entry, uri, event, result)
