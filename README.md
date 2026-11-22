@@ -291,7 +291,7 @@ checker.on :blocked do |result|
 end
 ```
 
-A link is blocked when its final result, after retries, redirects, and the `HEAD` to `GET` fallback, has one of those status codes. Blocked results publish `:blocked` instead of `:failure` and are collected in `results[:blocked]`. Retries still apply first, so a 429 that is in `retry_status_codes` is retried before being reported as blocked. Errors, such as timeouts, are never blocked. Blocked results are not cached.
+A link is blocked when its final result, after retries, redirects, and the `HEAD` to `GET` fallback, has one of those status codes. Blocked results publish `:blocked` instead of `:failure` and are collected in `results[:blocked]`. Retries still apply first, so a 429 that is in `retry_status_codes` is retried before being reported as blocked. Errors, such as timeouts, are never blocked. Blocked results are only cached with a [`blocked_ttl`](#caching).
 
 By default, `detect_challenges` also reports non-successful responses that carry a known bot challenge as blocked, whatever their status code. Combined with a narrower `blocked_status_codes`, such as `[]`, this lets an ordinary 403 remain a failure while a challenged one is blocked. Challenge detection currently recognizes Cloudflare's [`cf-mitigated: challenge`](https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/) response header. Set `detect_challenges: false` to report challenged responses as failures.
 
@@ -359,7 +359,16 @@ Identity includes the complete URL (including query values and fragment), transp
 
 #### Caching
 
-Persistent success caching is disabled by default. Enable it with an explicit file path and positive TTL in seconds. Recent successful checks can then be reused across checker instances; failures and errors are never stored. Cache writes are atomic and locked, and unreadable or malformed files fall back to normal checking.
+Persistent success caching is disabled by default. Enable it with an explicit file path and positive TTL in seconds. Recent successful checks can then be reused across checker instances; failures and errors are never stored.
+
+Add an optional `blocked_ttl` in seconds to also reuse [blocked results](#blocked-results) for a shorter period, so that bot-walled hosts aren't requested on every run but are still rechecked regularly. Blocked results are not cached without it. A cached blocked result is reused only while the checker's `blocked_status_codes` or `detect_challenges` still classify it as blocked; otherwise the link is checked again. Cache hits for blocked results emit `:result`, `:blocked`, and `:complete` with `cached? == true`.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(
+  blocked_status_codes: [401, 403, 429, 999],
+  cache: { file: 'tmp/link-checker/cache.json', ttl: 7 * 24 * 3600, blocked_ttl: 24 * 3600 }
+)
+``` Cache writes are atomic and locked, and unreadable or malformed files fall back to normal checking.
 
 ```ruby
 checker = LinkChecker::Typhoeus::Hydra::Checker.new(
