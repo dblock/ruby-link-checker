@@ -15,7 +15,7 @@ module LinkChecker
         end
 
         def failure?
-          !success? && !redirect? && !error?
+          !success? && !redirect? && !error? && !blocked?
         end
 
         def code

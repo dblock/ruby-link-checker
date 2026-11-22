@@ -12,6 +12,8 @@ module LinkChecker
       retries
       max_redirects
       retry_status_codes
+      blocked_status_codes
+      detect_challenges
       retry_after
       retry_backoff
       retry_jitter
@@ -31,6 +33,8 @@ module LinkChecker
       self.retries = 0
       self.max_redirects = 20
       self.retry_status_codes = [408, 425, 429, 500, 502, 503, 504]
+      self.blocked_status_codes = [401, 403, 429, 999]
+      self.detect_challenges = true
       self.retry_after = 0
       self.retry_backoff = 1
       self.retry_jitter = 0
@@ -58,6 +62,20 @@ module LinkChecker
       end
 
       @retry_status_codes = value&.dup
+    end
+
+    def blocked_status_codes=(value)
+      unless value.nil? || (value.is_a?(Array) && value.all? { |code| code.is_a?(Integer) && code.between?(100, 999) })
+        raise ArgumentError, "Invalid blocked status codes: #{value}"
+      end
+
+      @blocked_status_codes = value&.dup || []
+    end
+
+    def detect_challenges=(value)
+      raise ArgumentError, "Invalid detect_challenges: #{value}" unless [true, false].include?(value)
+
+      @detect_challenges = value
     end
 
     def retry_after=(value)

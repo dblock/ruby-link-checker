@@ -20,6 +20,35 @@ describe LinkChecker::Config do
         expect { LinkChecker.config.retries = -1 }.to raise_error ArgumentError, 'Invalid number of retries: -1'
       end
 
+      context 'blocked_status_codes' do
+        it 'accepts non-standard status codes' do
+          LinkChecker.config.blocked_status_codes = [403, 999]
+          expect(LinkChecker.config.blocked_status_codes).to eq [403, 999]
+        end
+
+        it 'treats nil as no blocked status codes' do
+          LinkChecker.config.blocked_status_codes = nil
+          expect(LinkChecker.config.blocked_status_codes).to eq []
+        end
+
+        it 'rejects status codes out of range' do
+          message = 'Invalid blocked status codes: [1000]'
+          expect { LinkChecker.config.blocked_status_codes = [1000] }.to raise_error ArgumentError, message
+        end
+
+        it 'rejects values that are not arrays' do
+          message = 'Invalid blocked status codes: 403'
+          expect { LinkChecker.config.blocked_status_codes = '403' }.to raise_error ArgumentError, message
+        end
+      end
+
+      context 'detect_challenges' do
+        it 'requires a boolean' do
+          message = 'Invalid detect_challenges: yes'
+          expect { LinkChecker.config.detect_challenges = 'yes' }.to raise_error ArgumentError, message
+        end
+      end
+
       context 'max_redirects' do
         it 'rejects negative limits' do
           expect { LinkChecker.config.max_redirects = -1 }.to raise_error ArgumentError, 'Invalid redirect limit: -1'
@@ -40,6 +69,12 @@ describe LinkChecker::Config do
     end
     it 'sets retries' do
       expect(LinkChecker.config.retries).to eq 0
+    end
+    it 'blocks status codes that bot protection commonly returns' do
+      expect(LinkChecker.config.blocked_status_codes).to eq [401, 403, 429, 999]
+    end
+    it 'detects challenges' do
+      expect(LinkChecker.config.detect_challenges).to be true
     end
   end  
 end

@@ -37,6 +37,9 @@ module LinkChecker
         _queue_task(uri, method, original_uri || uri, options)
       elsif @result && result.error?
         error! @result
+      elsif checker.blocked_result?(@result)
+        @result.blocked = true
+        blocked! @result
       else
         failure! @result
       end
