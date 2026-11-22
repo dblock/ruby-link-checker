@@ -1,4 +1,4 @@
-### 0.6.0 (Next)
+### 0.6.0 (2026/11/22)
 
 * [#31](https://github.com/dblock/ruby-link-checker/pull/31): Updated ruby-gem-release to 0.5.0 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#38](https://github.com/dblock/ruby-link-checker/pull/38): Added `blocked_status_codes` (default `[401, 403, 429, 999]`) and `detect_challenges` (enabled by default, recognizes Cloudflare's `cf-mitigated: challenge`) to report links blocked by bot walls as `:blocked` instead of `:failure`; set `blocked_status_codes: []` and `detect_challenges: false` to restore the previous behavior - [@dblock](https://github.com/dblock).
@@ -16,7 +16,6 @@
 * [#52](https://github.com/dblock/ruby-link-checker/pull/52): Added cache pruning with `cache: { prune: true }` and `checker.prune_cache!` to remove entries for links that are no longer checked - [@dblock](https://github.com/dblock).
 * [#53](https://github.com/dblock/ruby-link-checker/pull/53): Packaged only the library and its documentation, disabled the local Bundler `rake release` tasks, pinned the release workflow to a commit, updated `actions/checkout`, and removed the `git` pin now that Danger supports git 6 - [@dblock](https://github.com/dblock).
 * [#54](https://github.com/dblock/ruby-link-checker/pull/54): Added UPGRADING.md with instructions for upgrading to 0.6.0 - [@dblock](https://github.com/dblock).
-* Your contribution here.
 
 ### 0.5.1 (2026/11/08)
 
