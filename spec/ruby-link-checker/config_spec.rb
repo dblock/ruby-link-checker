@@ -49,6 +49,21 @@ describe LinkChecker::Config do
         end
       end
 
+      context 'host_headers' do
+        it 'treats nil as no host headers' do
+          LinkChecker.config.host_headers = nil
+          expect(LinkChecker.config.host_headers).to eq({})
+        end
+
+        it 'rejects invalid host patterns' do
+          expect { LinkChecker.config.host_headers = { 1 => {} } }.to raise_error ArgumentError, /Invalid host headers/
+        end
+
+        it 'rejects invalid headers' do
+          expect { LinkChecker.config.host_headers = { 'www.example.org' => 'Accept' } }.to raise_error ArgumentError
+        end
+      end
+
       context 'max_concurrency_per_host' do
         it 'requires a positive integer' do
           message = 'Invalid concurrency limit per host: 0'

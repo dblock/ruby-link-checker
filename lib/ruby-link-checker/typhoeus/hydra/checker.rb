@@ -9,9 +9,7 @@ module LinkChecker
               followlocation: false,
               timeout: checker.timeout,
               connecttimeout: checker.connecttimeout,
-              headers: {
-                'User-Agent' => checker.user_agent
-              }.merge(checker.headers)
+              headers: checker.request_headers_for(uri)
             }
           )
           request.on_complete do |response|

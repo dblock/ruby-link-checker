@@ -347,7 +347,7 @@ checker.check('https://www.example.org', location: 'two.html')
 checker.run # one check, two sets of result events
 ```
 
-Identity includes the complete URL (including query values and fragment), transport, methods, headers, user-agent, and request-related settings. Changing those settings prevents reuse. URLs containing user-info credentials bypass deduplication and caching.
+Identity includes the complete URL (including query values and fragment), transport, methods, headers, host headers, user-agent, and request-related settings. Changing those settings prevents reuse. URLs containing user-info credentials bypass deduplication and caching.
 
 #### Caching
 
@@ -393,6 +393,20 @@ checker = LinkChecker::Net::HTTP::Checker.new(
   }
 )
 ```
+
+Set `host_headers` to add or replace headers for specific hosts, on top of the global `headers`. Keys are an exact host name (case-insensitive) or a `Regexp` matched against the lower-cased host. Every matching entry applies, in order, and replaces earlier values with the same case-insensitive name, including `User-Agent`.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(
+  host_headers: {
+    'www.npmjs.com' => { 'Accept' => 'text/html' },
+    'api.github.com' => { 'Authorization' => "Bearer #{ENV.fetch('GITHUB_TOKEN')}" },
+    /(\A|\.)medium\.com\z/ => { 'Cookie' => 'consent=1' }
+  }
+)
+```
+
+Host headers are chosen for each request from that request's own host, including every redirect hop, so a token configured for one host is never sent to a different host that it redirects to. Global `headers` are sent to every host, including redirect targets. Host headers are part of the [deduplication](#deduplication) and [caching](#caching) identity, and so are their values: the cache file stores a hash of them, not the values themselves.
 
 ### Global Configuration
 

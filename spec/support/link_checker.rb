@@ -509,6 +509,81 @@ shared_context 'a link checker' do
     end
   end
 
+  context 'with host headers', :aggregate_failures do
+    let(:host_headers) { { 'www.example.org' => { 'Accept' => 'text/html' } } }
+    let(:checker) { described_class.new(methods: ['GET'], headers: { 'DNT' => '1' }, host_headers: host_headers) }
+    let(:url) { 'https://www.example.org/page' }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    def run_check(target = url)
+      checker.check(target)
+      checker.run if checker.respond_to?(:run)
+    end
+
+    it 'adds headers for a matching host on top of global headers' do
+      stub_request(:get, url).to_return(status: 200)
+      run_check
+      expect(a_request(:get, url).with(headers: { 'Accept' => 'text/html', 'DNT' => '1' })).to have_been_made
+    end
+
+    it 'does not add headers for other hosts' do
+      stub_request(:get, 'https://www.example.com/').to_return(status: 200)
+      run_check('https://www.example.com/')
+      expect(a_request(:get, 'https://www.example.com/').with(headers: { 'DNT' => '1' })).to have_been_made
+      expect(a_request(:get, 'https://www.example.com/').with(headers: { 'Accept' => 'text/html' })).not_to have_been_made
+    end
+
+    context 'with a pattern' do
+      let(:host_headers) { { /\.example\.org\z/ => { 'Cookie' => 'consent=1' } } }
+
+      it 'matches hosts with a regular expression' do
+        stub_request(:get, url).to_return(status: 200)
+        run_check
+        expect(a_request(:get, url).with(headers: { 'Cookie' => 'consent=1' })).to have_been_made
+      end
+    end
+
+    context 'with overrides' do
+      let(:host_headers) { { 'WWW.EXAMPLE.ORG' => { 'dnt' => '0', 'user-agent' => 'Browser/1.0' } } }
+
+      it 'replaces global headers and the user-agent case-insensitively' do
+        stub_request(:get, url).to_return(status: 200)
+        run_check
+        expect(a_request(:get, url).with(headers: { 'DNT' => '0', 'User-Agent' => 'Browser/1.0' })).to have_been_made
+      end
+    end
+
+    context 'with a redirect to another host' do
+      let(:host_headers) { { 'api.example.org' => { 'Authorization' => 'token secret' } } }
+      let(:url) { 'https://api.example.org/repo' }
+      let(:target) { 'https://www.example.com/repo' }
+
+      it 'does not forward host headers to the other host' do
+        stub_request(:get, url).to_return(status: 301, headers: { 'Location' => target })
+        stub_request(:get, target).to_return(status: 200)
+        run_check
+        expect(a_request(:get, url).with(headers: { 'Authorization' => 'token secret' })).to have_been_made
+        expect(a_request(:get, target).with(headers: { 'DNT' => '1' })).to have_been_made
+        expect(a_request(:get, target).with(headers: { 'Authorization' => 'token secret' })).not_to have_been_made
+      end
+    end
+
+    context 'with deduplication' do
+      let(:checker) { described_class.new(methods: ['GET'], deduplicate: true, host_headers: host_headers) }
+
+      it 'includes host headers in request identity' do
+        stub_request(:get, url).to_return(status: 200)
+        run_check
+        checker.host_headers = { 'www.example.org' => { 'Accept' => 'application/json' } }
+        run_check
+        expect(a_request(:get, url)).to have_been_made.twice
+      end
+    end
+  end
+
   context 'default' do
     subject do
       described_class.new
@@ -520,6 +595,7 @@ shared_context 'a link checker' do
 
     it 'has no default headers' do
       expect(subject.headers).to eq({})
+      expect(subject.host_headers).to eq({})
     end
   end
 

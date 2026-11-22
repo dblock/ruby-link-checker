@@ -8,6 +8,7 @@ module LinkChecker
       methods
       user_agent
       headers
+      host_headers
       logger
       retries
       max_redirects
@@ -31,6 +32,7 @@ module LinkChecker
       self.methods = %w[HEAD GET]
       self.user_agent = "Ruby Link Checker/#{LinkChecker::VERSION}"
       self.headers = {}
+      self.host_headers = {}
       self.logger = nil
       self.retries = 0
       self.max_redirects = 20
@@ -46,6 +48,16 @@ module LinkChecker
       self.cache = nil
       self.max_concurrency_per_host = nil
       self.min_host_interval = 0
+    end
+
+    def host_headers=(value)
+      value ||= {}
+      valid = value.is_a?(Hash) && value.all? do |host, host_values|
+        (host.is_a?(String) || host.is_a?(Regexp)) && host_values.is_a?(Hash)
+      end
+      raise ArgumentError, "Invalid host headers: #{value}" unless valid
+
+      @host_headers = value.transform_keys { |host| host.is_a?(String) ? host.downcase : host }
     end
 
     def retries=(value)
