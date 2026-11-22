@@ -19,6 +19,8 @@ describe LinkChecker::Typhoeus::Hydra::Checker do
     end
   end
 
+  it_behaves_like 'a link checker with per-host limits'
+
   describe TyphoeusTestLinkChecker::LinkChecker do
     it_behaves_like 'a link checker'
 

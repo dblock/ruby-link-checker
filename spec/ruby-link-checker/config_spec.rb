@@ -49,6 +49,20 @@ describe LinkChecker::Config do
         end
       end
 
+      context 'max_concurrency_per_host' do
+        it 'requires a positive integer' do
+          message = 'Invalid concurrency limit per host: 0'
+          expect { LinkChecker.config.max_concurrency_per_host = 0 }.to raise_error ArgumentError, message
+        end
+      end
+
+      context 'min_host_interval' do
+        it 'rejects negative intervals' do
+          message = 'Invalid min_host_interval: -1'
+          expect { LinkChecker.config.min_host_interval = -1 }.to raise_error ArgumentError, message
+        end
+      end
+
       context 'max_redirects' do
         it 'rejects negative limits' do
           expect { LinkChecker.config.max_redirects = -1 }.to raise_error ArgumentError, 'Invalid redirect limit: -1'
@@ -72,6 +86,10 @@ describe LinkChecker::Config do
     end
     it 'blocks status codes that bot protection commonly returns' do
       expect(LinkChecker.config.blocked_status_codes).to eq [401, 403, 429, 999]
+    end
+    it 'does not limit concurrency per host' do
+      expect(LinkChecker.config.max_concurrency_per_host).to be_nil
+      expect(LinkChecker.config.min_host_interval).to eq 0
     end
     it 'detects challenges' do
       expect(LinkChecker.config.detect_challenges).to be true

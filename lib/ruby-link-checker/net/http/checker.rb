@@ -4,6 +4,8 @@ module LinkChecker
       class Task < ::LinkChecker::Task
         def run!
           sleep(delay) if delay.positive?
+          host_wait = checker._reserve_host_slot(checker._host_key(uri))
+          sleep(host_wait) if host_wait.positive?
           ::Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
             http.read_timeout = checker.read_timeout if checker.read_timeout
             http.open_timeout = checker.open_timeout if checker.open_timeout

@@ -2,6 +2,29 @@
 require 'spec_helper'
 
 describe LinkChecker::Checker do
+  describe 'per-host slots' do
+    let(:checker) { LinkChecker::Net::HTTP::Checker.new(min_host_interval: 10) }
+
+    it 'spaces reservations for the same host' do
+      expect(checker._reserve_host_slot('www.example.org')).to eq 0
+      expect(checker._reserve_host_slot('www.example.org')).to be > 9
+    end
+
+    it 'keeps hosts independent' do
+      checker._reserve_host_slot('www.example.org')
+      expect(checker._reserve_host_slot('www.example.com')).to eq 0
+    end
+
+    it 'does not delay URIs without a host' do
+      expect(checker._host_key('\\/invalid-url')).to be_nil
+      expect(checker._reserve_host_slot(nil)).to eq 0
+    end
+
+    it 'normalizes host case' do
+      expect(checker._host_key('https://WWW.Example.org/path')).to eq 'www.example.org'
+    end
+  end
+
   describe LinkChecker::Cache do
     let(:directory) { Dir.mktmpdir('link-checker-spec-') }
     let(:file) { File.join(directory, 'cache.json') }

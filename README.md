@@ -23,6 +23,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [Retry After](#retry-after)
     - [Retry Policy](#retry-policy)
     - [Blocked Results](#blocked-results)
+    - [Per-Host Limits](#per-host-limits)
     - [Results](#results)
     - [Methods](#methods)
     - [Deduplication](#deduplication)
@@ -289,6 +290,19 @@ By default, `detect_challenges` also reports non-successful responses that carry
 ```ruby
 checker = LinkChecker::Typhoeus::Hydra::Checker.new(detect_challenges: false)
 ```
+
+#### Per-Host Limits
+
+Many links to the same host arrive as one burst, which bot protection and rate limits react to. Set `max_concurrency_per_host` to bound the requests in flight to one host (default `nil`, unlimited), and `min_host_interval` to the minimum number of seconds between the starts of consecutive requests to one host (default `0`). Hosts are compared case-insensitively, ignoring scheme and port, and the limits apply to every request, including redirects and retries.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(
+  max_concurrency_per_host: 2,
+  min_host_interval: 0.5
+)
+```
+
+Limits per host apply in addition to the global `max_concurrency` of `LinkChecker::Async::HTTP` and Hydra's `max_concurrency`. Hydra holds requests per host and hands them to Hydra as slots free up; requests that must wait for `min_host_interval` are handed over once the active batch drains, like delayed retries, so actual intervals can exceed the minimum. `LinkChecker::Net::HTTP` is sequential, so only `min_host_interval` changes its behavior. Neither setting affects [deduplication](#deduplication) or [caching](#caching) identity.
 
 #### Results
 

@@ -14,6 +14,7 @@ describe LinkChecker::Net::HTTP::Checker do
   end
 
   it_behaves_like 'a link checker'
+  it_behaves_like 'a link checker with per-host limits', concurrent: false
 
   context 'with an HTTP URL' do
     let(:checker) { described_class.new(methods: ['GET']) }
