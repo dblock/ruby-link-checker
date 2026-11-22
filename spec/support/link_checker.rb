@@ -249,6 +249,41 @@ shared_context 'a link checker' do
       expect(a_request(:any, url)).to have_been_made.once
     end
 
+    context 'with pruning' do
+      let(:cache_options) { { file: File.join(directory, 'cache.json'), ttl: 60, prune: true } }
+
+      def cached_entries
+        JSON.parse(File.read(cache_options[:file]))['entries'].size
+      end
+
+      def cache_two_links
+        other_url = 'https://www.example.org/other'
+        stub_request(:any, url).to_return(status: 200)
+        stub_request(:any, other_url).to_return(status: 200)
+        [url, other_url].each { |link| checker.check(link) }
+        checker.run if checker.respond_to?(:run)
+      end
+
+      it 'drops entries that a run did not use' do
+        cache_two_links
+        expect(cached_entries).to eq 2
+        next_checker.check(url)
+        next_checker.run
+        expect(cached_entries).to eq 1
+        expect(next_checker.results[:success].first.cached?).to be true
+      end
+
+      it 'keeps entries without pruning' do
+        cache_two_links
+        unpruned = described_class.new(methods: ['GET'], cache: cache_options.merge(prune: false))
+        unpruned.check(url)
+        unpruned.run
+        expect(cached_entries).to eq 2
+        expect(unpruned.prune_cache!).to eq 1
+        expect(cached_entries).to eq 1
+      end
+    end
+
     it 'does not persist failed checks' do
       stub_request(:any, url).to_return({ status: 404 }, { status: 200 })
       checker.check(url)

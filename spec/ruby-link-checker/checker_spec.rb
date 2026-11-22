@@ -186,6 +186,29 @@ describe LinkChecker::Checker do
       expect(cache.fetch('key', 'https://www.example.org/')).to be_nil
     end
 
+    it 'prunes unused and expired entries' do
+      writer = described_class.new({ file: file, ttl: 60 }, logger: LinkChecker::Logger.default)
+      %w[one two three].each { |key| writer.store(key, result) }
+      cache.fetch('two', 'https://www.example.org/')
+      expect(cache.prune!).to eq 2
+      expect(JSON.parse(File.read(file))['entries'].keys).to eq ['two']
+    end
+
+    it 'prunes nothing without a cache file' do
+      expect(cache.prune!).to eq 0
+    end
+
+    it 'validates the prune option' do
+      options = { file: file, ttl: 60, prune: 'yes' }
+      expect { described_class.new(options, logger: LinkChecker::Logger.default) }.to raise_error(ArgumentError, /prune/)
+    end
+
+    it 'does not fail a run when the cache cannot be pruned' do
+      cache.store('key', result)
+      allow(FileUtils).to receive(:mkdir_p).and_raise(Errno::EACCES)
+      expect(cache.prune!).to eq 0
+    end
+
     it 'requires an explicit file and TTL' do
       expect { described_class.new({}, logger: LinkChecker::Logger.default) }.to raise_error ArgumentError
       expect { described_class.new({ file: file }, logger: LinkChecker::Logger.default) }.to raise_error ArgumentError
@@ -194,6 +217,12 @@ describe LinkChecker::Checker do
     it 'does not turn a cache write failure into a failed link' do
       allow(FileUtils).to receive(:mkdir_p).and_raise(Errno::EACCES)
       expect { cache.store('key', result) }.not_to raise_error
+    end
+  end
+
+  context 'without a cache' do
+    it 'prunes nothing' do
+      expect(LinkChecker::Net::HTTP::Checker.new.prune_cache!).to eq 0
     end
   end
 

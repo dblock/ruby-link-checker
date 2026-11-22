@@ -59,6 +59,7 @@ module LinkChecker
             @semaphore = ::Async::Semaphore.new(max_concurrency) if max_concurrency
             _flush!
           end
+          _finish_run
         ensure
           @barrier = nil
           @semaphore = nil

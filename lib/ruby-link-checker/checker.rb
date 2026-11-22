@@ -63,6 +63,16 @@ module LinkChecker
       execute_check(uri, options) { |event, result| handle_shared_result(key, entry, uri, event, result) }
     end
 
+    # Finishes a run. Checkers that queue requests run them first; Net::HTTP checks links as they are submitted.
+    def run
+      _finish_run
+    end
+
+    # Removes cache entries that this checker did not use, returning the number of entries removed.
+    def prune_cache!
+      @cache_store ? @cache_store.prune! : 0
+    end
+
     # Whether a final, non-successful HTTP result should be reported as blocked rather than failed.
     def blocked_result?(result)
       return false if result.nil? || result.error? || result.success? || result.redirect?
@@ -135,6 +145,10 @@ module LinkChecker
     end
 
     private
+
+    def _finish_run
+      prune_cache! if @cache_store&.prune?
+    end
 
     def _host_headers_identity
       host_headers.map do |pattern, values|
