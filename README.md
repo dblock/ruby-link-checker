@@ -200,7 +200,7 @@ checker = LinkChecker::Async::HTTP::Checker.new(max_concurrency: 25)
 
 #### [LinkChecker::Net::HTTP](lib/ruby-link-checker/net/http/checker.rb)
 
-Slow, sequential checker.
+Slow, sequential checker. It checks each link when it's submitted; call `checker.run` afterwards to finish the run, for example to [prune the cache](#caching).
 
 ```ruby
 require 'net/http'
@@ -401,6 +401,14 @@ checker = LinkChecker::Typhoeus::Hydra::Checker.new(
 ```
 
 Each cache hit emits `:result` and `:success` with the new submission's metadata and `cached? == true`. Persistent hits return `LinkChecker::CachedResult` with the HTTP method, status, original/final URIs, redirect hops, and metadata; native request/response objects and headers are not persisted. Results whose final URL or any redirect hop contains user-info credentials are not written. Cache files written by versions before 0.6.0 are ignored and rewritten. Add the cache directory to your ignore rules.
+
+Entries for links that are no longer checked stay in the cache file until they expire. Set `prune: true` to remove every entry that the checker didn't use when `checker.run` finishes, or call `checker.prune_cache!`, which returns the number of entries removed. Pruning is off by default: enable it only when each run checks every link that should stay cached, not for partial runs, such as incremental builds, and not with a cache file shared by checkers that check different links.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(
+  cache: { file: 'tmp/link-checker/cache.json', ttl: 7 * 24 * 3600, prune: true }
+)
+```
 
 Caching alone does not coalesce in-flight checks. With deduplication enabled, successful results remain reusable within that checker even after the persistent TTL expires. Cached successes do not replay historical redirect/retry events.
 

@@ -60,6 +60,7 @@ module LinkChecker
             ready, @delayed = @delayed.partition { |time, _action| time <= _monotonic_time }
             ready.each { |entry| entry.last.call }
           end
+          _finish_run
         end
 
         def _queue(request, delay: 0)

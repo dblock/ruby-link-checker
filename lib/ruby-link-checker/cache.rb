@@ -42,11 +42,21 @@ module LinkChecker
         raise ArgumentError, 'Cache requires a positive, finite blocked TTL in seconds'
       end
 
+      @prune = options.fetch(:prune, false)
+      raise ArgumentError, 'Cache prune must be true or false' unless [true, false].include?(@prune)
+
       @file = File.expand_path(options[:file])
       @logger = logger
+      @seen = Set.new
+    end
+
+    # Whether to prune entries that were not used when a run finishes.
+    def prune?
+      @prune
     end
 
     def fetch(key, uri)
+      @seen << key
       data = read_entries[key]
       return unless fresh?(data) && data['code'].is_a?(Integer)
       return unless blocked?(data) ? data['code'].between?(100, 999) : data['code'].between?(200, 299)
@@ -59,15 +69,12 @@ module LinkChecker
     end
 
     def store(key, result)
+      @seen << key
       return unless result.success? || (result.blocked? && @blocked_ttl)
       return if URI(result.result_uri.to_s).userinfo
       return if result.redirects.any? { |hop| URI(hop.uri.to_s).userinfo || URI(hop.to.to_s).userinfo }
 
-      directory = File.dirname(@file)
-      FileUtils.mkdir_p(directory)
-      File.open("#{@file}.lock", File::RDWR | File::CREAT, 0o600) do |lock|
-        lock.flock(File::LOCK_EX)
-        entries = read_entries.select { |_entry_key, data| fresh?(data) }
+      update_entries do |entries|
         entries[key] = {
           'checked_at' => Time.now.to_f,
           'method' => result.method,
@@ -76,17 +83,46 @@ module LinkChecker
           'redirects' => result.redirects.map { |hop| [hop.uri.to_s, hop.code, hop.to.to_s] }
         }
         entries[key].merge!('blocked' => true, 'challenge' => result.challenge) if result.blocked?
+        entries
+      end
+    rescue IOError, SystemCallError, JSON::GeneratorError
+      @logger.warn("Unable to write link cache #{@file}; result was not cached")
+    end
+
+    # Removes entries that this cache instance neither read nor wrote, and expired entries.
+    # Returns the number of entries removed.
+    def prune!
+      return 0 unless File.exist?(@file)
+
+      removed = 0
+      update_entries do |entries|
+        kept = entries.slice(*@seen)
+        removed = read_entries.size - kept.size
+        kept
+      end
+      @logger.info("Pruned #{removed} unused #{removed == 1 ? 'entry' : 'entries'} from link cache #{@file}")
+      removed
+    rescue IOError, SystemCallError, JSON::GeneratorError
+      @logger.warn("Unable to prune link cache #{@file}")
+      0
+    end
+
+    private
+
+    # Atomically replaces the fresh entries with those returned by the block, under an exclusive lock.
+    def update_entries
+      directory = File.dirname(@file)
+      FileUtils.mkdir_p(directory)
+      File.open("#{@file}.lock", File::RDWR | File::CREAT, 0o600) do |lock|
+        lock.flock(File::LOCK_EX)
+        entries = yield(read_entries.select { |_entry_key, data| fresh?(data) })
         Tempfile.create(['link-checker-', '.json'], directory) do |file|
           file.write(JSON.generate('version' => VERSION, 'entries' => entries))
           file.flush
           File.rename(file.path, @file)
         end
       end
-    rescue IOError, SystemCallError, JSON::GeneratorError
-      @logger.warn("Unable to write link cache #{@file}; result was not cached")
     end
-
-    private
 
     def seconds?(value)
       value.is_a?(Numeric) && value.real? && value.finite? && value.positive?
