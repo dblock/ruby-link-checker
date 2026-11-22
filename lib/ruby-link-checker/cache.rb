@@ -13,6 +13,9 @@ module LinkChecker
     def initialize(data, uri)
       @code = data.fetch('code')
       super(URI(data.fetch('result_uri')), data.fetch('method'), URI(uri.to_s))
+      @redirects = data.fetch('redirects').map do |hop_uri, code, to|
+        Redirect.new(uri: URI(hop_uri), code: code, to: URI(to))
+      end.freeze
       @cached = true
     end
 
@@ -22,7 +25,7 @@ module LinkChecker
   end
 
   class Cache
-    VERSION = 1
+    VERSION = 2
 
     def initialize(options, logger:)
       unless options.is_a?(Hash) && options[:file].is_a?(String) && !options[:file].strip.empty?
@@ -41,10 +44,8 @@ module LinkChecker
     def fetch(key, uri)
       data = read_entries[key]
       return unless fresh?(data) && data['code'].is_a?(Integer) && data['code'].between?(200, 299)
-      return unless data['method'].is_a?(String) && data['result_uri'].is_a?(String)
-
-      parsed = URI(data['result_uri'])
-      return unless %w[http https].include?(parsed.scheme) && parsed.host && !parsed.userinfo
+      return unless data['method'].is_a?(String) && safe_uri?(data['result_uri'])
+      return unless valid_redirects?(data['redirects'])
 
       CachedResult.new(data, uri)
     rescue URI::InvalidURIError
@@ -54,6 +55,7 @@ module LinkChecker
     def store(key, result)
       return unless result.success?
       return if URI(result.result_uri.to_s).userinfo
+      return if result.redirects.any? { |hop| URI(hop.uri.to_s).userinfo || URI(hop.to.to_s).userinfo }
 
       directory = File.dirname(@file)
       FileUtils.mkdir_p(directory)
@@ -64,7 +66,8 @@ module LinkChecker
           'checked_at' => Time.now.to_f,
           'method' => result.method,
           'code' => result.code,
-          'result_uri' => result.result_uri.to_s
+          'result_uri' => result.result_uri.to_s,
+          'redirects' => result.redirects.map { |hop| [hop.uri.to_s, hop.code, hop.to.to_s] }
         }
         Tempfile.create(['link-checker-', '.json'], directory) do |file|
           file.write(JSON.generate('version' => VERSION, 'entries' => entries))
@@ -77,6 +80,19 @@ module LinkChecker
     end
 
     private
+
+    def safe_uri?(value)
+      return false unless value.is_a?(String)
+
+      parsed = URI(value)
+      %w[http https].include?(parsed.scheme) && parsed.host && !parsed.userinfo
+    end
+
+    def valid_redirects?(redirects)
+      redirects.is_a?(Array) && redirects.all? do |hop|
+        hop.is_a?(Array) && hop.size == 3 && safe_uri?(hop[0]) && hop[1].is_a?(Integer) && safe_uri?(hop[2])
+      end
+    end
 
     def fresh?(data)
       return false unless data.is_a?(Hash)

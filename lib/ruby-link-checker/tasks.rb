@@ -16,6 +16,7 @@ module LinkChecker
       @checker = checker
       @logger = checker.logger
       @redirects = [uri]
+      @hops = []
       @options = options
       raise ArgumentError, :tasks_klass unless @task_klass && @task_klass < ::LinkChecker::Task
     end
@@ -117,12 +118,14 @@ module LinkChecker
 
     def _handle_result(result)
       @result = result
+      result.redirects = @hops.dup.freeze unless result.redirect?
       retry_text = " (#{_retries_left_s})" if retry? && (result.error? || result.failure?)
       logger.info "#{' ' * (redirects.count - 1)}#{result}#{retry_text}"
       result! result
       if result.redirect?
         redirect! result
         redirected_to_uri = URI.join(result.result_uri, result.redirect_to)
+        @hops << Redirect.new(uri: result.result_uri, code: result.code, to: redirected_to_uri)
         if redirects.include?(redirected_to_uri)
           raise LinkChecker::Errors::RedirectLoopError,
                 redirects.push(redirected_to_uri)
@@ -137,11 +140,13 @@ module LinkChecker
         success! result
       else
         @redirects = [uri]
+        @hops = []
         execute!
       end
     rescue StandardError => e
       logger.error("#{self}##{__method__}") { e } rescue nil
       error_result = ResultError.new(result.result_uri, result.method, result.uri, e, options)
+      error_result.redirects = @hops.dup.freeze
       result! error_result
       error! error_result
     end
