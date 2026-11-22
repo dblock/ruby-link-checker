@@ -1,7 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/wordmark-dark.svg">
-  <img alt="ruby-link-checker" src="assets/wordmark.svg" width="375">
-</picture>
+<img alt="ruby-link-checker" src="assets/logo.svg" width="128">
 
 Fast Ruby Link Checker
 ======================
