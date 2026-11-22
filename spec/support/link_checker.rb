@@ -284,6 +284,41 @@ shared_context 'a link checker' do
       end
     end
 
+    context 'with host headers' do
+      def other_url
+        'https://crates.example.com/'
+      end
+
+      def check_with(host_headers, *links)
+        next_one = described_class.new(methods: ['GET'], cache: cache_options, host_headers: host_headers)
+        links.each { |link| next_one.check(link) }
+        next_one.run if next_one.respond_to?(:run)
+        next_one.results[:success].to_h { |result| [result.uri.to_s, result.cached?] }
+      end
+
+      before do
+        stub_request(:any, url).to_return(status: 200)
+        stub_request(:any, other_url).to_return(status: 200)
+        check_with({}, url, other_url)
+      end
+
+      it 'keeps cache hits for hosts whose headers did not change' do
+        cached = check_with({ 'crates.example.com' => { 'Accept' => 'text/html' } }, url, other_url)
+        expect(cached).to eq(url => true, other_url => false)
+      end
+
+      it 'misses for a host whose headers changed' do
+        check_with({ 'crates.example.com' => { 'Accept' => 'text/html' } }, other_url)
+        cached = check_with({ 'crates.example.com' => { 'Accept' => 'application/json' } }, url, other_url)
+        expect(cached).to eq(url => true, other_url => false)
+      end
+
+      it 'only misses for hosts that a pattern matches' do
+        cached = check_with({ /\.example\.com\z/ => { 'Accept' => 'text/html' } }, url, other_url)
+        expect(cached).to eq(url => true, other_url => false)
+      end
+    end
+
     it 'does not persist failed checks' do
       stub_request(:any, url).to_return({ status: 404 }, { status: 200 })
       checker.check(url)

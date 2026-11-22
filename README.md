@@ -451,7 +451,7 @@ checker = LinkChecker::Typhoeus::Hydra::Checker.new(
 )
 ```
 
-Host headers are chosen for each request from that request's own host, including every redirect hop, so a token configured for one host is never sent to a different host that it redirects to. Global `headers` are sent to every host, including redirect targets. Host headers are part of the [deduplication](#deduplication) and [caching](#caching) identity, and so are their values: the cache file stores a hash of them, not the values themselves.
+Host headers are chosen for each request from that request's own host, including every redirect hop, so a token configured for one host is never sent to a different host that it redirects to. Global `headers` are sent to every host, including redirect targets. The headers sent for a URL, global headers merged with its matching host headers, are part of its [deduplication](#deduplication) and [caching](#caching) identity: the cache file stores a hash of them, not the values themselves. Changing the host headers of one host only invalidates cached results for the URLs on the hosts it matches.
 
 ### Global Configuration
 
