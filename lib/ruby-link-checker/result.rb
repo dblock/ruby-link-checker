@@ -44,11 +44,22 @@ module LinkChecker
       0
     end
 
+    # Known bot challenges, detected from response headers: the name of the challenge, the header, and its value.
+    CHALLENGES = [
+      # https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/
+      %w[Cloudflare cf-mitigated challenge]
+    ].freeze
+
+    # The name of the bot challenge that the response carries, such as "Cloudflare", or nil.
+    def challenge
+      CHALLENGES.find do |_name, header, value|
+        Array(response_headers[header]).join(',').split(',').map(&:strip).include?(value)
+      end&.first
+    end
+
     # Whether the response carries a known bot challenge.
-    # Cloudflare sets cf-mitigated: challenge on every challenge page.
-    # https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/
     def challenge?
-      Array(response_headers['cf-mitigated']).join(',').split(',').map(&:strip).include?('challenge')
+      !challenge.nil?
     end
 
     def redirect?
@@ -89,6 +100,42 @@ module LinkChecker
       nil
     end
 
+    # :success, :failure, :blocked, or :error for a final result, or :redirect for a redirect hop.
+    def outcome
+      if success? then :success
+      elsif blocked? then :blocked
+      elsif error? then :error
+      elsif redirect? then :redirect
+      else :failure
+      end
+    end
+
+    # A stable, human-readable explanation of the outcome, such as "HTTP 404" or "Cloudflare challenge (HTTP 403)".
+    def reason
+      name = challenge unless success?
+      name ? "#{name} challenge (HTTP #{code})" : "HTTP #{code}"
+    end
+
+    # A serializable summary of the result.
+    def to_h
+      {
+        url: uri.to_s,
+        result_url: result_uri.to_s,
+        method: method,
+        code: code.is_a?(Integer) ? code : nil,
+        outcome: outcome,
+        reason: reason,
+        redirects: redirects.map { |hop| { url: hop.uri.to_s, code: hop.code, to: hop.to.to_s } },
+        permanent_redirect: permanent_redirect?,
+        blocked: blocked?,
+        challenge: challenge,
+        cached: cached?,
+        error: error&.message,
+        error_type: error_type,
+        options: options
+      }
+    end
+
     def to_s
       status_s = if success?
                    'OK'
@@ -119,6 +166,20 @@ module LinkChecker
 
     def code
       error.class.name
+    end
+
+    def reason
+      case error
+      when LinkChecker::Errors::RedirectLoopError then 'Redirect loop'
+      when LinkChecker::Errors::RedirectLimitError then 'Too many redirects'
+      when URI::InvalidURIError then 'Invalid URL'
+      else
+        case error_type
+        when :timeout then 'Timeout'
+        when :connection then 'Connection error'
+        else "Error (#{error.class.name})"
+        end
+      end
     end
 
     def error_type

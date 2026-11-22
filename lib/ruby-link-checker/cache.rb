@@ -8,7 +8,7 @@ require 'uri'
 
 module LinkChecker
   class CachedResult < Result
-    attr_reader :code
+    attr_reader :code, :challenge
 
     def initialize(data, uri)
       @code = data.fetch('code')
@@ -17,16 +17,12 @@ module LinkChecker
         Redirect.new(uri: URI(hop_uri), code: code, to: URI(to))
       end.freeze
       @blocked = data['blocked'] == true
-      @challenge = data['challenge'] == true
+      @challenge = data['challenge'] if data['challenge'].is_a?(String)
       @cached = true
     end
 
     def success?
       !blocked?
-    end
-
-    def challenge?
-      @challenge
     end
   end
 
@@ -79,7 +75,7 @@ module LinkChecker
           'result_uri' => result.result_uri.to_s,
           'redirects' => result.redirects.map { |hop| [hop.uri.to_s, hop.code, hop.to.to_s] }
         }
-        entries[key].merge!('blocked' => true, 'challenge' => result.challenge?) if result.blocked?
+        entries[key].merge!('blocked' => true, 'challenge' => result.challenge) if result.blocked?
         Tempfile.create(['link-checker-', '.json'], directory) do |file|
           file.write(JSON.generate('version' => VERSION, 'entries' => entries))
           file.flush

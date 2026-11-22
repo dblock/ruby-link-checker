@@ -419,7 +419,9 @@ shared_context 'a link checker' do
       it 'reuses a cached challenge only while challenges are detected' do
         stub_request(:get, url).to_return(status: 503, headers: { 'cf-mitigated' => 'challenge' })
         run_check
-        expect(recheck.results[:blocked].first.cached?).to be true
+        cached = recheck.results[:blocked].first
+        expect([cached.cached?, cached.challenge]).to eq [true, 'Cloudflare']
+        expect(cached.reason).to eq 'Cloudflare challenge (HTTP 503)'
         expect(recheck(checker_options.merge(detect_challenges: false)).results[:failure].size).to eq 1
         expect(a_request(:get, url)).to have_been_made.twice
       end
@@ -827,6 +829,82 @@ shared_context 'a link checker' do
         expect(a_request(:get, url)).to have_been_made.once
         expect(checker.results[:blocked].first.code).to eq 429
       end
+    end
+  end
+
+  context 'with result summaries', :aggregate_failures do
+    let(:checker) { described_class.new(methods: ['GET'], max_redirects: 3) }
+    let(:url) { 'https://www.example.org/summary' }
+    let(:result) { checker.results.values.flatten.first }
+    let(:redirected_summary) do
+      {
+        url: url, result_url: 'https://www.example.org/moved', method: 'GET', code: 200,
+        outcome: :success, reason: 'HTTP 200', permanent_redirect: true,
+        redirects: [{ url: url, code: 301, to: 'https://www.example.org/moved' }],
+        blocked: false, challenge: nil, cached: false, error: nil, error_type: nil, options: { location: 'page.html' }
+      }
+    end
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    def run_check(target = url)
+      checker.check(target, location: 'page.html')
+      checker.run if checker.respond_to?(:run)
+    end
+
+    it 'summarizes a success after a permanent redirect' do
+      stub_request(:get, url).to_return(status: 301, headers: { 'Location' => '/moved' })
+      stub_request(:get, 'https://www.example.org/moved').to_return(status: 200)
+      run_check
+      expect(result.to_h).to eq(redirected_summary)
+      expect(JSON.parse(JSON.generate(result.to_h))['reason']).to eq 'HTTP 200'
+    end
+
+    it 'explains failures with the status' do
+      stub_request(:get, url).to_return(status: 404)
+      run_check
+      expect([result.outcome, result.reason, result.to_h[:code]]).to eq [:failure, 'HTTP 404', 404]
+    end
+
+    it 'explains blocked statuses and challenges' do
+      stub_request(:get, url).to_return(status: 403)
+      stub_request(:get, "#{url}/challenge").to_return(status: 503, headers: { 'cf-mitigated' => 'challenge' })
+      run_check
+      run_check("#{url}/challenge")
+      expect(checker.results[:blocked].map(&:reason)).to eq ['HTTP 403', 'Cloudflare challenge (HTTP 503)']
+      expect(checker.results[:blocked].map { |blocked| blocked.to_h[:challenge] }).to eq [nil, 'Cloudflare']
+    end
+
+    it 'names challenges on failures when they are not reported as blocked' do
+      checker.detect_challenges = false
+      checker.blocked_status_codes = []
+      stub_request(:get, url).to_return(status: 403, headers: { 'cf-mitigated' => 'challenge' })
+      run_check
+      expect([result.outcome, result.to_h[:challenge]]).to eq [:failure, 'Cloudflare']
+      expect(result.reason).to eq 'Cloudflare challenge (HTTP 403)'
+    end
+
+    it 'explains timeouts' do
+      stub_request(:get, url).to_timeout
+      run_check
+      expect([result.outcome, result.reason]).to eq [:error, 'Timeout']
+      expect(result.to_h.values_at(:code, :error_type)).to eq [nil, :timeout]
+    end
+
+    it 'explains redirect loops and limits' do
+      stub_request(:get, url).to_return(status: 302, headers: { 'Location' => url })
+      stub_request(:get, "#{url}/far").to_return(status: 302, headers: { 'Location' => "#{url}/far/1" })
+      stub_request(:get, %r{/far/\d}).to_return { |request| { status: 302, headers: { 'Location' => "#{request.uri}1" } } }
+      run_check
+      run_check("#{url}/far")
+      expect(checker.results[:error].map(&:reason)).to eq ['Redirect loop', 'Too many redirects']
+    end
+
+    it 'explains invalid URLs' do
+      run_check('\/invalid-url')
+      expect([result.reason, result.to_h[:url]]).to eq ['Invalid URL', '\/invalid-url']
     end
   end
 

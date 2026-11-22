@@ -12,6 +12,7 @@
 * [#48](https://github.com/dblock/ruby-link-checker/pull/48): Updated ruby-gem-release to 0.9.0, added Commonmarker for Markdown changelogs, and added a release dry run - [@dblock](https://github.com/dblock).
 * [#49](https://github.com/dblock/ruby-link-checker/pull/49): Fixed loading the gem on Ruby 4.0 by declaring the `logger` dependency, and added a `Package` workflow that installs the built gem in a clean environment - [@dblock](https://github.com/dblock).
 * [#50](https://github.com/dblock/ruby-link-checker/pull/50): Ignored URL fragments in deduplication and cache identity, so links that differ only by `#fragment` share one check - [@dblock](https://github.com/dblock).
+* [#51](https://github.com/dblock/ruby-link-checker/pull/51): Added `result.outcome`, a stable `result.reason`, and a serializable `result.to_h` - [@dblock](https://github.com/dblock).
 * Your contribution here.
 
 ### 0.5.1 (2026/11/08)
