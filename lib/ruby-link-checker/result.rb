@@ -34,6 +34,13 @@ module LinkChecker
       false
     end
 
+    # Whether the response carries a known bot challenge.
+    # Cloudflare sets cf-mitigated: challenge on every challenge page.
+    # https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/
+    def challenge?
+      Array(response_headers['cf-mitigated']).join(',').split(',').map(&:strip).include?('challenge')
+    end
+
     def redirect?
       false
     end

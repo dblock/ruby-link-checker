@@ -352,6 +352,65 @@ shared_context 'a link checker' do
       end
     end
 
+    context 'with a blocked TTL' do
+      let(:directory) { Dir.mktmpdir('link-checker-spec-') }
+      let(:checker_options) do
+        { methods: ['GET'], cache: { file: File.join(directory, 'cache.json'), ttl: 60, blocked_ttl: 30 } }
+      end
+
+      after do
+        FileUtils.remove_entry(directory)
+      end
+
+      def recheck(options = checker_options)
+        next_checker = described_class.new({ blocked_status_codes: [403] }.merge(options))
+        next_checker.check(url, location: 'next.html')
+        next_checker.run if next_checker.respond_to?(:run)
+        next_checker
+      end
+
+      it 'reuses a blocked result within the blocked TTL' do
+        stub_request(:get, url).to_return(status: 403)
+        run_check
+        next_checker = recheck
+        result = next_checker.results[:blocked].first
+        expect([result.cached?, result.blocked?, result.failure?, result.code]).to eq [true, true, false, 403]
+        expect(result.options).to eq(location: 'next.html')
+        expect(a_request(:get, url)).to have_been_made.once
+      end
+
+      it 'rechecks a blocked result after the blocked TTL' do
+        stub_request(:get, url).to_return(status: 403)
+        run_check
+        allow(Time).to receive(:now).and_return(Time.now + 31)
+        expect(recheck.results[:blocked].first.cached?).to be false
+        expect(a_request(:get, url)).to have_been_made.twice
+      end
+
+      it 'rechecks when the cached status code is no longer blocked' do
+        stub_request(:get, url).to_return(status: 403)
+        run_check
+        next_checker = recheck(checker_options.merge(blocked_status_codes: [429]))
+        expect(next_checker.results[:failure].first.code).to eq 403
+        expect(a_request(:get, url)).to have_been_made.twice
+      end
+
+      it 'reuses a cached challenge only while challenges are detected' do
+        stub_request(:get, url).to_return(status: 503, headers: { 'cf-mitigated' => 'challenge' })
+        run_check
+        expect(recheck.results[:blocked].first.cached?).to be true
+        expect(recheck(checker_options.merge(detect_challenges: false)).results[:failure].size).to eq 1
+        expect(a_request(:get, url)).to have_been_made.twice
+      end
+
+      it 'never caches failures' do
+        stub_request(:get, url).to_return(status: 404)
+        run_check
+        recheck
+        expect(a_request(:get, url)).to have_been_made.twice
+      end
+    end
+
     context 'without blocked status codes' do
       let(:checker) { described_class.new(methods: ['GET'], blocked_status_codes: []) }
 

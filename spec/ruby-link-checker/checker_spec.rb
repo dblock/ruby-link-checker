@@ -48,6 +48,13 @@ describe LinkChecker::Checker do
       )
     end
 
+    let(:blocked_result) do
+      LinkChecker::Net::HTTP::Result.new(
+        URI('https://www.example.org/'), 'GET', URI('https://www.example.org/'),
+        {}, Net::HTTPForbidden.new('1.1', '403', 'Forbidden'), {}
+      ).tap { |forbidden| forbidden.blocked = true }
+    end
+
     after do
       FileUtils.remove_entry(directory)
     end
@@ -121,6 +128,23 @@ describe LinkChecker::Checker do
       result.result_uri = URI('https://user:password@www.example.org/')
       cache.store('key', result)
       expect(File).not_to exist(file)
+    end
+
+    it 'validates the blocked TTL' do
+      options = { file: file, ttl: 60, blocked_ttl: 0 }
+      expect { described_class.new(options, logger: LinkChecker::Logger.default) }.to raise_error(ArgumentError, /blocked/)
+    end
+
+    it 'does not store blocked results without a blocked TTL' do
+      cache.store('key', blocked_result)
+      expect(File).not_to exist(file)
+    end
+
+    it 'ignores blocked entries without a blocked TTL' do
+      blocked_cache = described_class.new({ file: file, ttl: 60, blocked_ttl: 30 }, logger: LinkChecker::Logger.default)
+      blocked_cache.store('key', blocked_result)
+      expect(blocked_cache.fetch('key', 'https://www.example.org/').blocked?).to be true
+      expect(cache.fetch('key', 'https://www.example.org/')).to be_nil
     end
 
     it 'requires an explicit file and TTL' do

@@ -50,14 +50,11 @@ module LinkChecker
 
       cached_result = @successful[key] if deduplicate
       cached_result ||= @cache_store&.fetch(key, uri)
-      if cached_result
+      if cached_result&.success?
         @successful[key] ||= cached_result if deduplicate
-        result = copy_result(cached_result, subscriber)
-        result.cached = true
-        publish(:result, result)
-        publish(:success, result)
-        return
+        return publish_cached(:success, cached_result, subscriber)
       end
+      return publish_cached(:blocked, cached_result, subscriber) if blocked_result?(cached_result)
 
       entry = { subscribers: [subscriber], events: [] }
       @pending[key] = entry if deduplicate
@@ -69,7 +66,7 @@ module LinkChecker
       return false if result.nil? || result.error? || result.success? || result.redirect?
       return true if blocked_status_codes.include?(result.code)
 
-      detect_challenges && challenge?(result)
+      detect_challenges && result.challenge?
     end
 
     # Request headers for uri: the user-agent, then global headers, then every matching host_headers entry.
@@ -125,12 +122,6 @@ module LinkChecker
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
-    # Cloudflare sets cf-mitigated: challenge on every challenge page.
-    # https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/
-    def challenge?(result)
-      Array(result.response_headers['cf-mitigated']).join(',').split(',').map(&:strip).include?('challenge')
-    end
-
     def execute_check(uri, options, &handler)
       tasks = Tasks.new(
         self,
@@ -143,6 +134,14 @@ module LinkChecker
         handler ? handler.call(event, *args) : publish(event, args.first)
       end
       tasks.execute!
+    end
+
+    def publish_cached(event, cached_result, subscriber)
+      result = copy_result(cached_result, subscriber)
+      result.cached = true
+      result.blocked = event == :blocked
+      publish(:result, result)
+      publish(event, result)
     end
 
     def publish(event, result)
@@ -158,8 +157,8 @@ module LinkChecker
       subscribers = entry[:subscribers].dup
       if OUTCOME_EVENTS.include?(event)
         @pending.delete(key) if @pending[key].equal?(entry)
-        if event == :success && request_key(uri) == key
-          @successful[key] = result if deduplicate
+        if %i[success blocked].include?(event) && request_key(uri) == key
+          @successful[key] = result if deduplicate && event == :success
           @cache_store&.store(key, result)
         end
       end

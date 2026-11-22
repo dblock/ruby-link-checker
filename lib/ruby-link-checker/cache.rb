@@ -16,11 +16,17 @@ module LinkChecker
       @redirects = data.fetch('redirects').map do |hop_uri, code, to|
         Redirect.new(uri: URI(hop_uri), code: code, to: URI(to))
       end.freeze
+      @blocked = data['blocked'] == true
+      @challenge = data['challenge'] == true
       @cached = true
     end
 
     def success?
-      true
+      !blocked?
+    end
+
+    def challenge?
+      @challenge
     end
   end
 
@@ -33,8 +39,11 @@ module LinkChecker
       end
 
       @ttl = options[:ttl]
-      unless @ttl.is_a?(Numeric) && @ttl.real? && @ttl.finite? && @ttl.positive?
-        raise ArgumentError, 'Cache requires a positive, finite TTL in seconds'
+      raise ArgumentError, 'Cache requires a positive, finite TTL in seconds' unless seconds?(@ttl)
+
+      @blocked_ttl = options[:blocked_ttl]
+      unless @blocked_ttl.nil? || seconds?(@blocked_ttl)
+        raise ArgumentError, 'Cache requires a positive, finite blocked TTL in seconds'
       end
 
       @file = File.expand_path(options[:file])
@@ -43,7 +52,8 @@ module LinkChecker
 
     def fetch(key, uri)
       data = read_entries[key]
-      return unless fresh?(data) && data['code'].is_a?(Integer) && data['code'].between?(200, 299)
+      return unless fresh?(data) && data['code'].is_a?(Integer)
+      return unless blocked?(data) ? data['code'].between?(100, 999) : data['code'].between?(200, 299)
       return unless data['method'].is_a?(String) && safe_uri?(data['result_uri'])
       return unless valid_redirects?(data['redirects'])
 
@@ -53,7 +63,7 @@ module LinkChecker
     end
 
     def store(key, result)
-      return unless result.success?
+      return unless result.success? || (result.blocked? && @blocked_ttl)
       return if URI(result.result_uri.to_s).userinfo
       return if result.redirects.any? { |hop| URI(hop.uri.to_s).userinfo || URI(hop.to.to_s).userinfo }
 
@@ -69,6 +79,7 @@ module LinkChecker
           'result_uri' => result.result_uri.to_s,
           'redirects' => result.redirects.map { |hop| [hop.uri.to_s, hop.code, hop.to.to_s] }
         }
+        entries[key].merge!('blocked' => true, 'challenge' => result.challenge?) if result.blocked?
         Tempfile.create(['link-checker-', '.json'], directory) do |file|
           file.write(JSON.generate('version' => VERSION, 'entries' => entries))
           file.flush
@@ -80,6 +91,10 @@ module LinkChecker
     end
 
     private
+
+    def seconds?(value)
+      value.is_a?(Numeric) && value.real? && value.finite? && value.positive?
+    end
 
     def safe_uri?(value)
       return false unless value.is_a?(String)
@@ -94,12 +109,18 @@ module LinkChecker
       end
     end
 
+    def blocked?(data)
+      data['blocked'] == true
+    end
+
+    # Successes expire after ttl and blocked results after blocked_ttl; blocked entries are stale without one.
     def fresh?(data)
       return false unless data.is_a?(Hash)
 
+      ttl = blocked?(data) ? @blocked_ttl : @ttl
       timestamp = data['checked_at']
       now = Time.now.to_f
-      timestamp.is_a?(Numeric) && timestamp.finite? && timestamp <= now && now - timestamp < @ttl
+      !ttl.nil? && timestamp.is_a?(Numeric) && timestamp.finite? && timestamp <= now && now - timestamp < ttl
     end
 
     def read_entries
