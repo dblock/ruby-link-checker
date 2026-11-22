@@ -1,3 +1,7 @@
+### 0.6.1 (Next)
+
+* Your contribution here.
+
 ### 0.6.0 (2026/11/22)
 
 * [#31](https://github.com/dblock/ruby-link-checker/pull/31): Updated ruby-gem-release to 0.5.0 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
