@@ -17,6 +17,7 @@ Gem::Specification.new do |s|
   s.licenses = ['MIT']
   s.summary = 'Fast ruby link checker.'
   s.metadata['rubygems_mfa_required'] = 'true'
+  s.add_dependency 'logger'
   s.add_development_dependency 'async-http'
   s.add_development_dependency 'typhoeus'
 end

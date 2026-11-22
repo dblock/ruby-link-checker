@@ -1,0 +1,45 @@
+name: Package
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        entry:
+          - { ruby: '3.3' }
+          - { ruby: '3.4' }
+          - { ruby: '4.0' }
+    name: Package (${{ matrix.entry.ruby }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set Up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.entry.ruby }}
+      - name: Build Gem
+        run: gem build ruby-link-checker.gemspec --output "$RUNNER_TEMP/ruby-link-checker.gem"
+      - name: Install Gem
+        run: gem install "$RUNNER_TEMP/ruby-link-checker.gem" --install-dir "$RUNNER_TEMP/gems" --no-document
+      - name: Load Installed Gem
+        working-directory: ${{ runner.temp }}
+        env:
+          GEM_HOME: ${{ runner.temp }}/gems
+          GEM_PATH: ${{ runner.temp }}/gems
+        run: |
+          ruby -e '
+            require "net/http"
+            require "ruby-link-checker"
+            spec = Gem.loaded_specs.fetch("ruby-link-checker")
+            abort "Loaded #{spec.full_gem_path}, not the installed gem" unless spec.full_gem_path.start_with?(ENV.fetch("GEM_HOME"))
+            checker = LinkChecker::Net::HTTP::Checker.new
+            abort "Unexpected results: #{checker.results.keys}" unless checker.results.key?(:blocked)
+            puts "ruby-link-checker #{LinkChecker::VERSION} on Ruby #{RUBY_VERSION}"
+          '

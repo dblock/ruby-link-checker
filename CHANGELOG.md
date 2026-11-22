@@ -10,6 +10,7 @@
 * [#46](https://github.com/dblock/ruby-link-checker/pull/46): Added per-host exponential backoff for rate-limited (429) responses with `rate_limit_retries` (default `2`, `0` disables), `rate_limit_backoff`, `max_rate_limit_delay`, and `rate_limit_status_codes`, honoring `Retry-After` - [@dblock](https://github.com/dblock).
 * [#47](https://github.com/dblock/ruby-link-checker/pull/47): Added a logo and wordmark, excluded from the gem package - [@dblock](https://github.com/dblock).
 * [#48](https://github.com/dblock/ruby-link-checker/pull/48): Updated ruby-gem-release to 0.9.0, added Commonmarker for Markdown changelogs, and added a release dry run - [@dblock](https://github.com/dblock).
+* [#49](https://github.com/dblock/ruby-link-checker/pull/49): Fixed loading the gem on Ruby 4.0 by declaring the `logger` dependency, and added a `Package` workflow that installs the built gem in a clean environment - [@dblock](https://github.com/dblock).
 * Your contribution here.
 
 ### 0.5.1 (2026/11/08)
