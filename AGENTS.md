@@ -18,6 +18,6 @@ Keep Markdown paragraphs on one line. Keep each PR branch to one commit, squash 
 
 Run focused RSpec tests for behavior changes and `bundle exec rubocop` before committing. `bundle exec rake` runs both the full specs and RuboCop. Avoid repeated intermediate test runs; rerun when failures or subsequent changes require it.
 
-For changelog or README changes, run `bundle exec danger dry_run --base=origin/main`; Danger checks changelog entries and README table-of-contents consistency. Keep the temporary `git < 6` dependency pin until Danger supports git 6; the Gemfile comment links the upstream fix.
+For changelog or README changes, run `bundle exec danger dry_run --base=origin/main`; Danger checks changelog entries and README table-of-contents consistency.
 
 Do not commit Gemfile.lock; this repository ignores it. Include `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` in AI-assisted commits and disclose AI involvement when posting GitHub comments on behalf of the user.
