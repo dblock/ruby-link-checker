@@ -398,8 +398,8 @@ end
 Events enable processing of results as they become available.
 
 ```ruby
-checker.on :result do |result|
-  puts result # any result
+checker.on :complete do |result|
+  puts result # the final result of each link
 end
 
 checker.on :error, :failure do |result|
@@ -407,16 +407,33 @@ checker.on :error, :failure do |result|
 end
 ```
 
-Checkers support the following events.
+Some events fire once per attempt, others fire once per link with its final result. Subscribe to `:complete`, or to the outcome events, to report links: `:result` also fires for each redirect hop and for a failed `HEAD` that is followed by a `GET`, so treating every `:result` that isn't a success as a broken link reports redirects and fallbacks as broken.
 
-| Event    | Description                                                    |
-|----------|----------------------------------------------------------------|
-| :retry   | A request is being retried on failure or error.                |
-| :result  | A new result, any of success, failure, or error.               |
-| :success | A valid URL, usually a 2xx response from the server.           |
-| :failure | A failed URL, usually a 4xx or a 5xx response from the server. |
-| :blocked | A URL blocked by bot protection, see [Blocked Results](#blocked-results). |
-| :error   | An error, such as an invalid URL or a network timeout.         |
+| Event     | Fires                  | Description                                                              |
+|-----------|------------------------|--------------------------------------------------------------------------|
+| :result   | Once per attempt       | A new response or error, including redirects and attempts that are retried or followed by another method. |
+| :redirect | Once per redirect hop  | A redirect response that is being followed.                              |
+| :retry    | Once per retry         | A request is being retried on failure or error.                          |
+| :success  | Once per link (final)  | A valid URL, usually a 2xx response from the server.                     |
+| :failure  | Once per link (final)  | A failed URL, usually a 4xx or a 5xx response from the server.           |
+| :blocked  | Once per link (final)  | A URL blocked by bot protection, see [Blocked Results](#blocked-results). |
+| :error    | Once per link (final)  | An error, such as an invalid URL or a network timeout.                   |
+| :complete | Once per link (final)  | The final result, after the outcome event, whatever the outcome.         |
+
+Exactly one of `:success`, `:failure`, `:blocked`, or `:error` fires for each checked link, followed by `:complete` with the same result. For example, checking a URL that redirects once to a page that answers `HEAD` with 405 and `GET` with 200 publishes the following events, in order.
+
+| Event     | Method | Code |
+|-----------|--------|------|
+| :result   | HEAD   | 301  |
+| :redirect | HEAD   | 301  |
+| :result   | HEAD   | 405  |
+| :result   | GET    | 301  |
+| :redirect | GET    | 301  |
+| :result   | GET    | 200  |
+| :success  | GET    | 200  |
+| :complete | GET    | 200  |
+
+Cache hits publish `:result`, `:success`, and `:complete`. With [deduplication](#deduplication), every submission of a URL receives its own copy of each event.
 
 Events are called with results, which contain the following properties.
 
