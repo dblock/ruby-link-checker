@@ -557,7 +557,7 @@ Anecdotal results show `LinkChecker::Async::HTTP` using significantly less CPU t
 
 ## Contributing
 
-You're encouraged to contribute to ruby-link-checker. See [CONTRIBUTING](CONTRIBUTING.md) for details.
+You're encouraged to contribute to ruby-link-checker. See [CONTRIBUTING](CONTRIBUTING.md) for details, [CHANGELOG](CHANGELOG.md) for changes, [UPGRADING](UPGRADING.md) for upgrade instructions, and [RELEASING](RELEASING.md) for how releases are made.
 
 ## Copyright and License
 
