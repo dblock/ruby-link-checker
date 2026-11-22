@@ -196,7 +196,8 @@ module LinkChecker
     def copy_result(result, subscriber)
       result.dup.tap do |copy|
         copy.uri = URI(subscriber.first)
-        copy.result_uri = result.result_uri.dup
+        # Without redirects, the final URL is the submitted one, including its own fragment.
+        copy.result_uri = result.redirects.empty? ? URI(subscriber.first) : result.result_uri.dup
         copy.options = subscriber.last
       end
     end
@@ -204,6 +205,9 @@ module LinkChecker
     def request_key(uri)
       parsed = URI(uri.to_s)
       return unless %w[http https].include?(parsed.scheme) && parsed.host && !parsed.userinfo
+
+      # Fragments are never sent over HTTP, so links that differ only by #fragment share a check.
+      parsed.fragment = nil
 
       attributes = Config::ATTRIBUTES - IDENTITY_EXCLUDED_ATTRIBUTES
       attributes += %i[timeout connecttimeout read_timeout open_timeout protocol].select { |key| respond_to?(key) }

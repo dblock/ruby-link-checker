@@ -4,7 +4,7 @@ module LinkChecker
       class Task < ::LinkChecker::Task
         def run!
           request = ::Typhoeus::Request.new(
-            uri, {
+            request_uri, {
               method: method.downcase.to_sym,
               followlocation: false,
               timeout: checker.timeout,
@@ -23,6 +23,13 @@ module LinkChecker
             end
           end
           checker._queue(request, delay: delay)
+        end
+
+        private
+
+        # Fragments are not part of an HTTP request.
+        def request_uri
+          uri.fragment ? uri.dup.tap { |request_uri| request_uri.fragment = nil } : uri
         end
       end
 
