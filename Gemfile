@@ -7,6 +7,7 @@ gemspec
 gem 'rake'
 
 group :development, :test do
+  gem 'commonmarker', '~> 2.10', require: false
   gem 'danger'
   gem 'danger-changelog', '0.8.0'
   gem 'danger-pr-comment'
@@ -17,7 +18,7 @@ group :development, :test do
   gem 'rubocop', '~> 1.0'
   gem 'rubocop-rake'
   gem 'rubocop-rspec'
-  gem 'ruby-gem-release', '~> 0.5.0', require: false
+  gem 'ruby-gem-release', '~> 0.9.0', require: false
   gem 'vcr'
   gem 'webmock'
 end
