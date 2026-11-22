@@ -32,9 +32,11 @@ module LinkChecker
 
     attr_accessor(*Config::ATTRIBUTES)
 
+    DEFAULT_USER_AGENT = "Ruby Link Checker/#{LinkChecker::VERSION}".freeze
+
     def reset
       self.methods = %w[HEAD GET]
-      self.user_agent = "Ruby Link Checker/#{LinkChecker::VERSION}"
+      self.user_agent = DEFAULT_USER_AGENT
       self.headers = {}
       self.host_headers = {}
       self.logger = nil

@@ -9,6 +9,21 @@ describe LinkChecker::Checker do
       checker.send(:request_key, url)
     end
 
+    it 'does not change with the version in the default user-agent' do
+      before = key
+      stub_const('LinkChecker::Config::DEFAULT_USER_AGENT', 'Ruby Link Checker/99.0.0')
+      checker.user_agent = LinkChecker::Config::DEFAULT_USER_AGENT
+      expect(key).to eq before
+    end
+
+    it 'changes with a custom user-agent' do
+      before = key
+      checker.user_agent = 'Custom Agent/1.0'
+      changed = key
+      checker.user_agent = 'Custom Agent/2.0'
+      expect([before, changed, key].uniq.size).to eq 3
+    end
+
     it 'does not change with host headers for other hosts' do
       before = key
       checker.host_headers = { 'crates.io' => { 'Accept' => 'text/html' }, /\.example\.com\z/ => { 'DNT' => '1' } }

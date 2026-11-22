@@ -232,6 +232,8 @@ module LinkChecker
       settings = attributes.to_h { |key| [key, send(key)] }
       # Only the headers sent for this URL are part of its identity, so changing the headers of other hosts keeps it.
       settings[:headers] = _merge_headers([headers] + _matching_host_headers(parsed)).sort_by { |key, _value| key }
+      # The default user-agent includes the gem version; leave it out so that upgrading keeps cached results.
+      settings[:user_agent] = 'Ruby Link Checker' if user_agent == Config::DEFAULT_USER_AGENT
       settings.delete(:host_headers)
       Digest::SHA256.hexdigest(JSON.generate([task_klass.name, parsed.to_s, settings]))
     rescue URI::InvalidURIError, JSON::GeneratorError, TypeError

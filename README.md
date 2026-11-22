@@ -419,7 +419,7 @@ checker = LinkChecker::Net::HTTP::Checker.new(logger: Logger.new(STDOUT))
 
 #### User-Agent
 
-Pass your own user-agent. Default is `Ruby Link Checker/x.y.z`.
+Pass your own user-agent. Default is `Ruby Link Checker/x.y.z`. The user-agent is part of the [caching](#caching) identity, except for the version in the default one, so upgrading the gem keeps cached results.
 
 ```ruby
 checker = LinkChecker::Net::HTTP::Checker.new(user_agent: 'Custom Agent/1.0')
