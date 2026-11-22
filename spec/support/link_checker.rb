@@ -584,6 +584,95 @@ shared_context 'a link checker' do
     end
   end
 
+  context 'with redirect chains', :aggregate_failures do
+    let(:checker_options) { { methods: ['GET'] } }
+    let(:checker) { described_class.new(checker_options) }
+    let(:url) { 'https://www.example.org/old' }
+    let(:result) { checker.results.values.flatten.first }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    def run_check
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+    end
+
+    it 'exposes the hops on the final result' do
+      stub_request(:get, url).to_return(status: 301, headers: { 'Location' => '/moved' })
+      stub_request(:get, 'https://www.example.org/moved').to_return(status: 302, headers: { 'Location' => 'new' })
+      stub_request(:get, 'https://www.example.org/new').to_return(status: 200)
+      run_check
+      expect(result.redirects.map(&:code)).to eq [301, 302]
+      expect(result.redirects.map { |hop| hop.uri.to_s }).to eq [url, 'https://www.example.org/moved']
+      expect(result.redirects.map { |hop| hop.to.to_s }).to eq ['https://www.example.org/moved', 'https://www.example.org/new']
+      expect(result.permanent_redirect?).to be true
+    end
+
+    it 'does not report temporary redirects as permanent' do
+      stub_request(:get, url).to_return(status: 307, headers: { 'Location' => '/new' })
+      stub_request(:get, 'https://www.example.org/new').to_return(status: 200)
+      run_check
+      expect(result.redirects.map(&:code)).to eq [307]
+      expect(result.permanent_redirect?).to be false
+    end
+
+    it 'has no hops without redirects' do
+      stub_request(:get, url).to_return(status: 404)
+      run_check
+      expect(result.redirects).to eq []
+      expect(result.permanent_redirect?).to be false
+    end
+
+    it 'includes the hops that led to a redirect loop' do
+      stub_request(:get, url).to_return(status: 308, headers: { 'Location' => '/new' })
+      stub_request(:get, 'https://www.example.org/new').to_return(status: 302, headers: { 'Location' => url })
+      run_check
+      expect(result.error).to be_a LinkChecker::Errors::RedirectLoopError
+      expect(result.redirects.map(&:code)).to eq [308, 302]
+    end
+
+    context 'with HEAD and GET' do
+      let(:checker_options) { { methods: %w[HEAD GET] } }
+
+      it 'only reports the hops of the final attempt' do
+        stub_request(:head, url).to_return(status: 301, headers: { 'Location' => '/head' })
+        stub_request(:head, 'https://www.example.org/head').to_return(status: 405)
+        stub_request(:get, url).to_return(status: 302, headers: { 'Location' => '/get' })
+        stub_request(:get, 'https://www.example.org/get').to_return(status: 200)
+        run_check
+        expect(result.method).to eq 'GET'
+        expect(result.redirects.map { |hop| [hop.code, hop.to.to_s] }).to eq [[302, 'https://www.example.org/get']]
+      end
+    end
+
+    context 'with a persistent cache' do
+      let(:directory) { Dir.mktmpdir('link-checker-spec-') }
+      let(:checker_options) { { methods: ['GET'], cache: { file: File.join(directory, 'cache.json'), ttl: 60 } } }
+
+      after do
+        FileUtils.remove_entry(directory)
+      end
+
+      def prime_cache
+        first_checker = described_class.new(checker_options)
+        first_checker.check(url)
+        first_checker.run if first_checker.respond_to?(:run)
+      end
+
+      it 'restores the hops of a cached success' do
+        stub_request(:get, url).to_return(status: 301, headers: { 'Location' => '/new' })
+        stub_request(:get, 'https://www.example.org/new').to_return(status: 200)
+        prime_cache
+        run_check
+        expect(result.cached?).to be true
+        expect(result.redirects.map(&:code)).to eq [301]
+        expect(result.permanent_redirect?).to be true
+      end
+    end
+  end
+
   context 'default' do
     subject do
       described_class.new

@@ -5,6 +5,7 @@
 * [#39](https://github.com/dblock/ruby-link-checker/pull/39): Added a `:complete` event published once per link with its final result and documented which events fire per attempt and which fire once per link - [@dblock](https://github.com/dblock).
 * [#40](https://github.com/dblock/ruby-link-checker/pull/40): Added `max_concurrency_per_host` and `min_host_interval` to limit concurrent and back-to-back requests to the same host - [@dblock](https://github.com/dblock).
 * [#42](https://github.com/dblock/ruby-link-checker/pull/42): Added `host_headers` to send headers to specific hosts, chosen per redirect hop so that credentials are not forwarded to other hosts - [@dblock](https://github.com/dblock).
+* [#43](https://github.com/dblock/ruby-link-checker/pull/43): Added `result.redirects` and `result.permanent_redirect?` with the redirect hops that led to a final result, persisted in the cache - [@dblock](https://github.com/dblock).
 * Your contribution here.
 
 ### 0.5.1 (2026/11/08)

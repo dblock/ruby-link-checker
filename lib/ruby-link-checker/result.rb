@@ -4,7 +4,7 @@ require 'socket'
 module LinkChecker
   class Result
     attr_accessor :uri, :result_uri, :method, :options, :checker
-    attr_writer :cached, :blocked
+    attr_writer :cached, :blocked, :redirects
 
     def initialize(current_uri, method, original_uri, options = {})
       @uri = original_uri
@@ -40,6 +40,16 @@ module LinkChecker
 
     def redirect_to
       nil
+    end
+
+    # The redirect hops that led to this result, oldest first.
+    def redirects
+      @redirects || []
+    end
+
+    # Whether any redirect hop that led to this result was permanent (301 or 308).
+    def permanent_redirect?
+      redirects.any?(&:permanent?)
     end
 
     def request_headers

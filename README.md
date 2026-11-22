@@ -244,6 +244,14 @@ Checkers follow up to 20 redirects per attempt and detect redirect loops. Relati
 checker = LinkChecker::Typhoeus::Hydra::Checker.new(max_redirects: 10)
 ```
 
+Final results expose the redirect hops that led to them as `result.redirects`, oldest first, each a `LinkChecker::Redirect` with the responding `uri`, its status `code`, the resolved target `to`, and `permanent?` for 301 and 308. Use `result.permanent_redirect?` to suggest updating links that moved permanently. Only the hops of the final attempt are included: when `HEAD` fails after redirects and `GET` is tried, `redirects` lists the `GET` hops. Redirect loop and limit errors include the hops that led to them.
+
+```ruby
+checker.on :success do |result|
+  puts "#{result.uri} moved permanently to #{result.result_uri}" if result.permanent_redirect?
+end
+```
+
 #### Retry After
 
 Set `retry_after` to a minimum delay in seconds (default `0`). Optional `retry_backoff` multiplies that delay on successive retries (default `1`), and `retry_jitter` adds a random fraction between `0` and the configured value (default `0`, maximum `1`). All delays are capped by `max_retry_delay` (default `60` seconds).
@@ -360,7 +368,7 @@ checker = LinkChecker::Typhoeus::Hydra::Checker.new(
 )
 ```
 
-Each cache hit emits `:result` and `:success` with the new submission's metadata and `cached? == true`. Persistent hits return `LinkChecker::CachedResult` with the HTTP method, status, original/final URIs, and metadata; native request/response objects and headers are not persisted. Redirect targets containing user-info credentials are not written. Add the cache directory to your ignore rules.
+Each cache hit emits `:result` and `:success` with the new submission's metadata and `cached? == true`. Persistent hits return `LinkChecker::CachedResult` with the HTTP method, status, original/final URIs, redirect hops, and metadata; native request/response objects and headers are not persisted. Results whose final URL or any redirect hop contains user-info credentials are not written. Cache files written by versions before 0.6.0 are ignored and rewritten. Add the cache directory to your ignore rules.
 
 Caching alone does not coalesce in-flight checks. With deduplication enabled, successful results remain reusable within that checker even after the persistent TTL expires. Cached successes do not replay historical redirect/retry events.
 
@@ -478,6 +486,8 @@ Events are called with results, which contain the following properties.
 | :response_headers | Response headers, accessible using `[]`.                        |
 | :cached?          | Whether this result was reused from a successful check.         |
 | :blocked?         | Whether this final result was reported as blocked.              |
+| :redirects        | The redirect hops that led to this result, see [Redirects](#redirects). |
+| :permanent_redirect? | Whether any of those hops was a permanent redirect (301 or 308). |
 
 See [result.rb](lib/ruby-link-checker/result.rb) for more details.
 

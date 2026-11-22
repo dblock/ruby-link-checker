@@ -64,7 +64,37 @@ describe LinkChecker::Checker do
       expect(restored.result_uri.to_s).to eq('https://www.example.org/final')
       expect(restored.code).to eq(200)
       data = JSON.parse(File.read(file)).fetch('entries').fetch('key')
-      expect(data.keys).to contain_exactly('checked_at', 'method', 'code', 'result_uri')
+      expect(data.keys).to contain_exactly('checked_at', 'method', 'code', 'result_uri', 'redirects')
+    end
+
+    it 'retains redirect hops' do
+      result.redirects = [LinkChecker::Redirect.new(uri: URI('https://www.example.org/'), code: 301, to: URI('https://www.example.org/final'))]
+      cache.store('key', result)
+      restored = cache.fetch('key', 'https://www.example.org/')
+      expect(restored.redirects.map(&:code)).to eq [301]
+      expect(restored.redirects.first.to).to eq URI('https://www.example.org/final')
+      expect(restored.permanent_redirect?).to be true
+    end
+
+    it 'does not store credentials in redirect hops' do
+      hop = LinkChecker::Redirect.new(uri: URI('https://user:password@www.example.org/'), code: 302, to: URI('https://www.example.org/final'))
+      result.redirects = [hop]
+      cache.store('key', result)
+      expect(File).not_to exist(file)
+    end
+
+    it 'ignores entries from the previous cache version' do
+      entry = { 'checked_at' => Time.now.to_f, 'method' => 'GET', 'code' => 200, 'result_uri' => 'https://www.example.org/' }
+      File.write(file, JSON.generate('version' => 1, 'entries' => { 'key' => entry }))
+      expect(cache.fetch('key', 'https://www.example.org/')).to be_nil
+    end
+
+    it 'ignores entries with malformed redirect hops' do
+      cache.store('key', result)
+      data = JSON.parse(File.read(file))
+      data['entries']['key']['redirects'] = [['https://user:password@www.example.org/', 301, 'https://www.example.org/']]
+      File.write(file, JSON.generate(data))
+      expect(cache.fetch('key', 'https://www.example.org/')).to be_nil
     end
 
     it 'merges writes from separate cache instances' do
@@ -83,7 +113,7 @@ describe LinkChecker::Checker do
     end
 
     it 'ignores malformed cache entries' do
-      File.write(file, JSON.generate('version' => 1, 'entries' => { 'key' => true }))
+      File.write(file, JSON.generate('version' => LinkChecker::Cache::VERSION, 'entries' => { 'key' => true }))
       expect(cache.fetch('key', 'https://www.example.org/')).to be_nil
     end
 
