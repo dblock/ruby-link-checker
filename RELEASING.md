@@ -2,7 +2,7 @@
 
 There are no hard rules about when to release ruby-link-checker. Release bug fixes frequently, features not so frequently and breaking API changes rarely.
 
-Releases use [ruby-gem-release](https://github.com/dblock/ruby-gem-release/tree/v0.9.0) and the manual [Release workflow](.github/workflows/release.yml). Merges do not publish. Every workflow dispatch performs a real release unless it is a dry run.
+Releases use [ruby-gem-release](https://github.com/dblock/ruby-gem-release/tree/v0.9.0) and the manual [Release workflow](.github/workflows/release.yml). Merges do not publish. Every workflow dispatch performs a real release unless it is a dry run. Bundler's local `rake release` tasks are disabled, so releases can't bypass the workflow.
 
 ## One-Time Setup
 
