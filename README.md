@@ -22,6 +22,7 @@ A fast Ruby link checker with support for multiple HTTP libraries. Does not pars
     - [Redirects](#redirects)
     - [Retry After](#retry-after)
     - [Retry Policy](#retry-policy)
+    - [Blocked Results](#blocked-results)
     - [Results](#results)
     - [Methods](#methods)
     - [Deduplication](#deduplication)
@@ -267,16 +268,38 @@ Customize `retry_status_codes` to choose retryable HTTP statuses. Set it to `nil
 checker = LinkChecker::Net::HTTP::Checker.new(retries: 1, retry_status_codes: [429, 503])
 ```
 
+#### Blocked Results
+
+Bot protection often answers automated requests with 401, 403, 429, or a non-standard status, such as LinkedIn's 999, even though the page exists. By default, checkers report links with those final status codes as blocked (unverified) instead of failed. Customize `blocked_status_codes` (default `[401, 403, 429, 999]`) to choose the statuses, or set it to `[]` to report them as failures, as versions before 0.6.0 did.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(
+  blocked_status_codes: [403, 999]
+)
+
+checker.on :blocked do |result|
+  puts "UNVERIFIED: #{result}" # result.blocked? == true, result.failure? == false
+end
+```
+
+A link is blocked when its final result, after retries, redirects, and the `HEAD` to `GET` fallback, has one of those status codes. Blocked results publish `:blocked` instead of `:failure` and are collected in `results[:blocked]`. Retries still apply first, so a 429 that is in `retry_status_codes` is retried before being reported as blocked. Errors, such as timeouts, are never blocked. Blocked results are not cached.
+
+By default, `detect_challenges` also reports non-successful responses that carry a known bot challenge as blocked, whatever their status code. Combined with a narrower `blocked_status_codes`, such as `[]`, this lets an ordinary 403 remain a failure while a challenged one is blocked. Challenge detection currently recognizes Cloudflare's [`cf-mitigated: challenge`](https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/) response header. Set `detect_challenges: false` to report challenged responses as failures.
+
+```ruby
+checker = LinkChecker::Typhoeus::Hydra::Checker.new(detect_challenges: false)
+```
+
 #### Results
 
 By default checkers collect results. 
 
 ```ruby
-checker = LinkChecker::Net::HTTP::Checker.new(results: false)
+checker = LinkChecker::Net::HTTP::Checker.new
 ...
 checker.run
 
-checker.results # => { error: [...], failure: [...], success: [...] }
+checker.results # => { error: [...], failure: [...], success: [...], blocked: [...] }
 ```
 
 You can disable this with `results: false`.
@@ -392,6 +415,7 @@ Checkers support the following events.
 | :result  | A new result, any of success, failure, or error.               |
 | :success | A valid URL, usually a 2xx response from the server.           |
 | :failure | A failed URL, usually a 4xx or a 5xx response from the server. |
+| :blocked | A URL blocked by bot protection, see [Blocked Results](#blocked-results). |
 | :error   | An error, such as an invalid URL or a network timeout.         |
 
 Events are called with results, which contain the following properties.
@@ -408,6 +432,7 @@ Events are called with results, which contain the following properties.
 | :error_type       | `:timeout`, `:connection`, or `:other` for errors; otherwise `nil`. |
 | :response_headers | Response headers, accessible using `[]`.                        |
 | :cached?          | Whether this result was reused from a successful check.         |
+| :blocked?         | Whether this final result was reported as blocked.              |
 
 See [result.rb](lib/ruby-link-checker/result.rb) for more details.
 

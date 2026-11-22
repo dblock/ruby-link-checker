@@ -239,6 +239,164 @@ shared_context 'a link checker' do
     end
   end
 
+  context 'with blocked results', :aggregate_failures do
+    let(:checker_options) { {} }
+    let(:checker) { described_class.new(checker_options) }
+    let(:url) { 'https://www.example.org/blocked' }
+    let(:events) { [] }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    before do
+      checker.on { |event, result| events << [event, result.method, result.code] }
+    end
+
+    def run_check(target = url)
+      checker.check(target, location: 'page.html')
+      checker.run if checker.respond_to?(:run)
+    end
+
+    it 'reports a blocked status after the HEAD to GET fallback' do
+      stub_request(:any, url).to_return(status: 403)
+      run_check
+      result = checker.results[:blocked].first
+      expect(result.blocked?).to be true
+      expect(result.failure?).to be false
+      expect(result.success?).to be false
+      expect(result.method).to eq 'GET'
+      expect(result.options).to eq(location: 'page.html')
+    end
+
+    it 'publishes blocked instead of failure' do
+      stub_request(:any, url).to_return(status: 403)
+      run_check
+      expect(checker.results[:blocked].first.to_s).to include('BLOCKED (403)')
+      expect(checker.results[:failure]).to be_empty
+      expect(events.map(&:first)).to eq(%i[result result blocked])
+    end
+
+    it 'reports a failure when GET returns a status that is not blocked' do
+      stub_request(:head, url).to_return(status: 403)
+      stub_request(:get, url).to_return(status: 404)
+      run_check
+      expect(checker.results[:failure].first.code).to eq 404
+      expect(checker.results[:failure].first.blocked?).to be false
+      expect(checker.results[:blocked]).to be_empty
+    end
+
+    it 'supports non-standard status codes' do
+      stub_request(:any, url).to_return(status: 999)
+      run_check
+      expect(checker.results[:blocked].first.code).to eq 999
+    end
+
+    it 'reports a blocked redirect target' do
+      stub_request(:any, url).to_return(status: 301, headers: { 'Location' => '/login' })
+      stub_request(:any, 'https://www.example.org/login').to_return(status: 401)
+      run_check
+      expect(checker.results[:blocked].first.result_uri.to_s).to eq 'https://www.example.org/login'
+    end
+
+    context 'with retries' do
+      let(:checker_options) { { methods: ['GET'], retries: 1 } }
+
+      it 'reports blocked only after retries are exhausted' do
+        stub_request(:get, url).to_return(status: 429)
+        run_check
+        expect(a_request(:get, url)).to have_been_made.twice
+        expect(events.map(&:first)).to eq(%i[result retry result blocked])
+      end
+
+      it 'reports success when a retry succeeds' do
+        stub_request(:get, url).to_return({ status: 429 }, { status: 200 })
+        run_check
+        expect(checker.results[:success].size).to eq 1
+        expect(checker.results[:blocked]).to be_empty
+      end
+    end
+
+    context 'with deduplication' do
+      let(:checker_options) { { methods: ['GET'], deduplicate: true } }
+
+      it 'delivers blocked results to every submission and rechecks later submissions' do
+        stub_request(:get, url).to_return(status: 403)
+        checker.check(url, location: 'one.html')
+        checker.check(url, location: 'two.html')
+        checker.run if checker.respond_to?(:run)
+        expect(checker.results[:blocked].map(&:options)).to eq([{ location: 'one.html' }, { location: 'two.html' }])
+        WebMock::RequestRegistry.instance.reset!
+        run_check
+        expect(a_request(:get, url)).to have_been_made.once
+        expect(checker.results[:blocked].size).to eq 3
+      end
+    end
+
+    context 'with a persistent cache' do
+      let(:directory) { Dir.mktmpdir('link-checker-spec-') }
+      let(:checker_options) { { methods: ['GET'], cache: { file: File.join(directory, 'cache.json'), ttl: 60 } } }
+
+      after do
+        FileUtils.remove_entry(directory)
+      end
+
+      it 'does not cache blocked results' do
+        stub_request(:get, url).to_return(status: 403)
+        run_check
+        described_class.new(checker_options).tap do |next_checker|
+          next_checker.check(url)
+          next_checker.run if next_checker.respond_to?(:run)
+        end
+        expect(a_request(:get, url)).to have_been_made.twice
+      end
+    end
+
+    context 'without blocked status codes' do
+      let(:checker) { described_class.new(methods: ['GET'], blocked_status_codes: []) }
+
+      it 'reports a failure' do
+        stub_request(:get, url).to_return(status: 403)
+        run_check
+        expect(checker.results[:failure].first.code).to eq 403
+        expect(checker.results[:blocked]).to be_empty
+      end
+    end
+
+    context 'with default challenge detection' do
+      let(:checker) { described_class.new(methods: ['GET'], blocked_status_codes: []) }
+
+      it 'reports a Cloudflare challenge as blocked' do
+        stub_request(:get, url).to_return(status: 403, headers: { 'cf-mitigated' => 'challenge' })
+        run_check
+        expect(checker.results[:blocked].first.code).to eq 403
+      end
+
+      it 'keeps an ordinary 403 a failure' do
+        stub_request(:get, url).to_return(status: 403)
+        run_check
+        expect(checker.results[:failure].first.code).to eq 403
+      end
+    end
+
+    context 'with a challenge header and detection disabled' do
+      let(:checker) { described_class.new(methods: ['GET'], blocked_status_codes: [], detect_challenges: false) }
+
+      it 'reports a failure' do
+        stub_request(:get, url).to_return(status: 403, headers: { 'cf-mitigated' => 'challenge' })
+        run_check
+        expect(checker.results[:failure].size).to eq 1
+      end
+    end
+
+    it 'never reports errors as blocked' do
+      stub_request(:any, url).to_timeout
+      run_check
+      expect(checker.results[:error].size).to eq 1
+      expect(checker.results[:blocked]).to be_empty
+    end
+  end
+
   context 'default' do
     subject do
       described_class.new
@@ -374,7 +532,8 @@ shared_context 'a link checker' do
                 failure: [],
                 success: [
                   result
-                ]
+                ],
+                blocked: []
               )
             end
 
@@ -450,9 +609,10 @@ shared_context 'a link checker' do
           context 'a redirect on HEAD followed by a 403', vcr: { cassette_name: '301+403' } do
             it 'calls redirect callback' do
               expect(result.success?).to be false
-              expect(result.failure?).to be true
+              expect(result.failure?).to be false
+              expect(result.blocked?).to be true
               expect(subject).to have_received(:called!).with(:redirect, anything)
-              expect(subject).to have_received(:called!).with(:failure, result).once
+              expect(subject).to have_received(:called!).with(:blocked, result).once
             end
 
             it 'reports its original and result urls' do
@@ -521,7 +681,7 @@ shared_context 'a link checker' do
 
             it 'calls redirect callback' do
               expect(result.success?).to be false
-              expect(result.failure?).to be true
+              expect(result.blocked?).to be true
               expect(result.error?).to be false
               expect(result.error).not_to be_a LinkChecker::Errors::RedirectLoopError
             end

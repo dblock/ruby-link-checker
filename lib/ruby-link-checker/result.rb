@@ -4,7 +4,7 @@ require 'socket'
 module LinkChecker
   class Result
     attr_accessor :uri, :result_uri, :method, :options, :checker
-    attr_writer :cached
+    attr_writer :cached, :blocked
 
     def initialize(current_uri, method, original_uri, options = {})
       @uri = original_uri
@@ -23,6 +23,11 @@ module LinkChecker
 
     def failure?
       false
+    end
+
+    # A final HTTP result whose status code or bot challenge matched the checker's blocked settings.
+    def blocked?
+      !!@blocked
     end
 
     def error?
@@ -60,6 +65,8 @@ module LinkChecker
     def to_s
       status_s = if success?
                    'OK'
+                 elsif blocked?
+                   'BLOCKED'
                  elsif failure?
                    'FAIL'
                  elsif redirect?
