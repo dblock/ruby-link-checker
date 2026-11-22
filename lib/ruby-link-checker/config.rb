@@ -21,6 +21,8 @@ module LinkChecker
       respect_retry_after
       deduplicate
       cache
+      max_concurrency_per_host
+      min_host_interval
     ].freeze
 
     attr_accessor(*Config::ATTRIBUTES)
@@ -42,6 +44,8 @@ module LinkChecker
       self.respect_retry_after = false
       self.deduplicate = false
       self.cache = nil
+      self.max_concurrency_per_host = nil
+      self.min_host_interval = 0
     end
 
     def retries=(value)
@@ -93,6 +97,19 @@ module LinkChecker
       raise ArgumentError, "Invalid retry_jitter: #{value}" if value > 1
 
       @retry_jitter = value
+    end
+
+    def max_concurrency_per_host=(value)
+      unless value.nil? || (value.is_a?(Integer) && value.positive?)
+        raise ArgumentError, "Invalid concurrency limit per host: #{value}"
+      end
+
+      @max_concurrency_per_host = value
+    end
+
+    def min_host_interval=(value)
+      validate_number!(:min_host_interval, value, 0)
+      @min_host_interval = value
     end
 
     def max_retry_delay=(value)

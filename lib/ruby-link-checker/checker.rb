@@ -9,7 +9,9 @@ module LinkChecker
     OUTCOME_EVENTS = %i[error failure success blocked].freeze
 
     # Settings that do not change the request or response, excluded from request identity.
-    IDENTITY_EXCLUDED_ATTRIBUTES = %i[logger cache deduplicate blocked_status_codes detect_challenges].freeze
+    IDENTITY_EXCLUDED_ATTRIBUTES = %i[
+      logger cache deduplicate blocked_status_codes detect_challenges max_concurrency_per_host min_host_interval
+    ].freeze
 
     attr_reader :results
 
@@ -22,6 +24,7 @@ module LinkChecker
       @results = { error: [], failure: [], success: [], blocked: [] } unless options.key?(:results) && !options[:results]
       @pending = {}
       @successful = {}
+      @host_next_start = {}
       @cache_store = Cache.new(cache, logger: @logger) if cache
     end
 
@@ -69,7 +72,34 @@ module LinkChecker
       detect_challenges && challenge?(result)
     end
 
+    # The host that per-host limits apply to, or nil when the URI has none.
+    def _host_key(uri)
+      URI(uri.to_s).host&.downcase
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    # Seconds to wait before the next request to host may start, without reserving it.
+    def _host_wait(host)
+      return 0 unless host && min_host_interval.positive? && @host_next_start[host]
+
+      [@host_next_start[host] - _monotonic_time, 0].max
+    end
+
+    # Reserves the next start for host, spaced by min_host_interval, and returns the seconds to wait for it.
+    def _reserve_host_slot(host)
+      return 0 unless host && min_host_interval.positive?
+
+      wait = _host_wait(host)
+      @host_next_start[host] = _monotonic_time + wait + min_host_interval
+      wait
+    end
+
     private
+
+    def _monotonic_time
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    end
 
     # Cloudflare sets cf-mitigated: challenge on every challenge page.
     # https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/detect-response/

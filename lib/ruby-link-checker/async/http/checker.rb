@@ -3,7 +3,7 @@ module LinkChecker
     module HTTP
       class Task < ::LinkChecker::Task
         def run!
-          checker._queue(delay: delay) { _run! }
+          checker._queue(delay: delay, host: checker._host_key(uri)) { _run! }
         end
 
         private
@@ -42,6 +42,7 @@ module LinkChecker
           end
           @queue = []
           @clients = {}
+          @host_semaphores = {}
           if max_concurrency && (!max_concurrency.is_a?(Integer) || max_concurrency < 1)
             raise ArgumentError, "Invalid concurrency limit: #{max_concurrency}"
           end
@@ -61,17 +62,22 @@ module LinkChecker
         ensure
           @barrier = nil
           @semaphore = nil
+          @host_semaphores = {}
           _close_clients!
         end
 
-        def _queue(delay: 0, &block)
+        def _queue(delay: 0, host: nil, &block)
           if @barrier
             @barrier.async do
               sleep(delay) if delay.positive?
-              @semaphore ? @semaphore.acquire(&block) : block.call
+              _with_host_limit(host) do
+                host_wait = _reserve_host_slot(host)
+                sleep(host_wait) if host_wait.positive?
+                @semaphore ? @semaphore.acquire(&block) : block.call
+              end
             end
           else
-            @queue << [delay, block]
+            @queue << [delay, host, block]
           end
         end
 
@@ -105,7 +111,13 @@ module LinkChecker
         def _flush!
           queue = @queue
           @queue = []
-          queue.each { |delay, block| _queue(delay: delay, &block) }
+          queue.each { |delay, host, block| _queue(delay: delay, host: host, &block) }
+        end
+
+        def _with_host_limit(host, &)
+          return yield unless host && max_concurrency_per_host
+
+          (@host_semaphores[host] ||= ::Async::Semaphore.new(max_concurrency_per_host)).acquire(&)
         end
 
         def _close_clients!

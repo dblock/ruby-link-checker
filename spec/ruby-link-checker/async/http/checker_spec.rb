@@ -70,6 +70,8 @@ describe LinkChecker::Async::HTTP::Checker do
     end
   end
 
+  it_behaves_like 'a link checker with per-host limits'
+
   describe AsyncTestLinkChecker::LinkChecker do
     it_behaves_like 'a link checker'
 

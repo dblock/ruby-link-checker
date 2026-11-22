@@ -3,6 +3,7 @@
 * [#31](https://github.com/dblock/ruby-link-checker/pull/31): Updated ruby-gem-release to 0.5.0 - [@dblock](https://github.com/dblock), [@Copilot](https://github.com/Copilot).
 * [#38](https://github.com/dblock/ruby-link-checker/pull/38): Added `blocked_status_codes` (default `[401, 403, 429, 999]`) and `detect_challenges` (enabled by default, recognizes Cloudflare's `cf-mitigated: challenge`) to report links blocked by bot walls as `:blocked` instead of `:failure`; set `blocked_status_codes: []` and `detect_challenges: false` to restore the previous behavior - [@dblock](https://github.com/dblock).
 * [#39](https://github.com/dblock/ruby-link-checker/pull/39): Added a `:complete` event published once per link with its final result and documented which events fire per attempt and which fire once per link - [@dblock](https://github.com/dblock).
+* [#40](https://github.com/dblock/ruby-link-checker/pull/40): Added `max_concurrency_per_host` and `min_host_interval` to limit concurrent and back-to-back requests to the same host - [@dblock](https://github.com/dblock).
 * Your contribution here.
 
 ### 0.5.1 (2026/11/08)
