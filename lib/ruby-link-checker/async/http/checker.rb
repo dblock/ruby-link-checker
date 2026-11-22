@@ -11,7 +11,7 @@ module LinkChecker
         def _run!
           client = checker._client_for(uri)
           headers = ::Protocol::HTTP::Headers[
-            [['user-agent', checker.user_agent]] + checker.headers.map { |key, value| [key, value] }
+            checker.request_headers_for(uri).map { |key, value| [key.downcase, value] }
           ]
           request = ::Protocol::HTTP::Request[method, uri.request_uri, headers]
           response = _call(client, request)

@@ -72,6 +72,20 @@ module LinkChecker
       detect_challenges && challenge?(result)
     end
 
+    # Request headers for uri: the user-agent, then global headers, then every matching host_headers entry.
+    # Later values replace earlier ones with the same case-insensitive name.
+    def request_headers_for(uri)
+      host = _host_key(uri)
+      sources = [{ 'User-Agent' => user_agent }, headers]
+      sources += host_headers.filter_map { |pattern, values| values if host && _host_match?(pattern, host) }
+      sources.each_with_object({}) do |values, merged|
+        values.each do |name, value|
+          merged.delete_if { |existing, _value| existing.casecmp?(name.to_s) }
+          merged[name.to_s] = value
+        end
+      end
+    end
+
     # The host that per-host limits apply to, or nil when the URI has none.
     def _host_key(uri)
       URI(uri.to_s).host&.downcase
@@ -96,6 +110,16 @@ module LinkChecker
     end
 
     private
+
+    def _host_headers_identity
+      host_headers.map do |pattern, values|
+        [pattern.is_a?(Regexp) ? pattern.inspect : pattern, values.sort_by { |key, _value| key.to_s }]
+      end
+    end
+
+    def _host_match?(pattern, host)
+      pattern.is_a?(Regexp) ? pattern.match?(host) : pattern == host
+    end
 
     def _monotonic_time
       Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -158,6 +182,8 @@ module LinkChecker
       attributes += %i[timeout connecttimeout read_timeout open_timeout protocol].select { |key| respond_to?(key) }
       settings = attributes.to_h { |key| [key, send(key)] }
       settings[:headers] = headers.sort_by { |key, _value| key.to_s }
+      settings.delete(:host_headers)
+      settings[:host_headers] = _host_headers_identity if host_headers.any?
       Digest::SHA256.hexdigest(JSON.generate([task_klass.name, parsed.to_s, settings]))
     rescue URI::InvalidURIError, JSON::GeneratorError, TypeError
       nil

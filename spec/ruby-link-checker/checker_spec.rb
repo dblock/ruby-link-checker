@@ -2,6 +2,18 @@
 require 'spec_helper'
 
 describe LinkChecker::Checker do
+  describe 'request identity' do
+    let(:checker) { LinkChecker::Net::HTTP::Checker.new }
+
+    it 'does not change when host headers are empty' do
+      key = checker.send(:request_key, 'https://www.example.org/')
+      checker.host_headers = { 'www.example.org' => {} }
+      expect(checker.send(:request_key, 'https://www.example.org/')).not_to eq key
+      checker.host_headers = {}
+      expect(checker.send(:request_key, 'https://www.example.org/')).to eq key
+    end
+  end
+
   describe 'per-host slots' do
     let(:checker) { LinkChecker::Net::HTTP::Checker.new(min_host_interval: 10) }
 
