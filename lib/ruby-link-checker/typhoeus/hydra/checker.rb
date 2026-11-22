@@ -65,14 +65,14 @@ module LinkChecker
 
         private
 
-        def _host_limits?
-          max_concurrency_per_host || min_host_interval.positive?
+        def _host_limits?(host)
+          max_concurrency_per_host || min_host_interval.positive? || @host_waiting[host].any? || _host_wait(host).positive?
         end
 
         # Holds requests per host and hands them to Hydra within the per-host limits.
         def _admit(request)
           host = _host_key(request.base_url)
-          return @hydra.queue(request) unless host && _host_limits?
+          return @hydra.queue(request) unless host && _host_limits?(host)
 
           @host_waiting[host] << request
           _dispatch(host)

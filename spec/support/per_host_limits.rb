@@ -47,6 +47,19 @@ shared_examples 'a link checker with per-host limits' do |concurrent: true|
       expect(checker.results[:success].map { |result| result.result_uri.to_s }).to eq ['https://www.example.org/next']
     end
 
+    context 'with a rate limited host' do
+      let(:server) { HostServer.new(statuses: [429]) }
+
+      it 'pauses later requests to the host' do
+        checker = check_all(described_class.new(methods: ['GET'], max_concurrency_per_host: 1, rate_limit_backoff: 0.1))
+        expect(checker.results[:success].size).to eq 6
+        expect(server.starts.size).to eq 7
+        first, second = server.starts.sort.first(2)
+        # The first request was rate limited, so the host is paused for 0.1s; allow for network jitter.
+        expect(second - first).to be >= 0.08
+      end
+    end
+
     it 'spaces out requests to the same host' do
       checker = check_all(described_class.new(methods: ['GET'], min_host_interval: 0.05))
       expect(checker.results[:success].size).to eq 6

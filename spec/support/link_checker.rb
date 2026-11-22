@@ -109,7 +109,7 @@ shared_context 'a link checker' do
       let(:checker_options) { { respect_retry_after: true, max_retry_delay: 0.005 } }
 
       it 'honors a bounded server delay' do
-        stub_request(:get, url).to_return({ status: 429, headers: { 'Retry-After' => '5' } }, { status: 200 })
+        stub_request(:get, url).to_return({ status: 503, headers: { 'Retry-After' => '5' } }, { status: 200 })
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         checker.check(url)
         checker.run if checker.respond_to?(:run)
@@ -300,7 +300,7 @@ shared_context 'a link checker' do
     end
 
     context 'with retries' do
-      let(:checker_options) { { methods: ['GET'], retries: 1 } }
+      let(:checker_options) { { methods: ['GET'], retries: 1, rate_limit_retries: 0 } }
 
       it 'reports blocked only after retries are exhausted' do
         stub_request(:get, url).to_return(status: 429)
@@ -732,6 +732,83 @@ shared_context 'a link checker' do
     end
   end
 
+  context 'with rate limiting', :aggregate_failures do
+    let(:checker_options) { { methods: ['GET'], rate_limit_backoff: 0.01 } }
+    let(:checker) { described_class.new(checker_options) }
+    let(:url) { 'https://www.example.org/limited' }
+    let(:events) { [] }
+
+    around do |example|
+      VCR.turned_off { example.run }
+    end
+
+    before do
+      checker.on { |event, result| events << [event, result.code] }
+    end
+
+    def run_check
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      checker.check(url)
+      checker.run if checker.respond_to?(:run)
+      Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+    end
+
+    it 'retries rate limited responses by default' do
+      stub_request(:get, url).to_return({ status: 429 }, { status: 200 })
+      run_check
+      expect(checker.results[:success].size).to eq 1
+      expect(events.map(&:first)).to eq(%i[result retry result success complete])
+    end
+
+    it 'backs off exponentially' do
+      stub_request(:get, url).to_return({ status: 429 }, { status: 429 }, { status: 200 })
+      checker.rate_limit_backoff = 0.02
+      expect(run_check).to be >= 0.06
+      expect(a_request(:get, url)).to have_been_made.times(3)
+    end
+
+    it 'reports blocked after the rate limit retries' do
+      stub_request(:get, url).to_return(status: 429)
+      run_check
+      expect(a_request(:get, url)).to have_been_made.times(3)
+      expect(checker.results[:blocked].first.code).to eq 429
+    end
+
+    it 'falls back to general retries after the rate limit retries' do
+      stub_request(:get, url).to_return(status: 429)
+      checker.rate_limit_retries = 1
+      checker.retries = 1
+      run_check
+      expect(a_request(:get, url)).to have_been_made.times(3)
+    end
+
+    it 'honors and caps Retry-After' do
+      stub_request(:get, url).to_return({ status: 429, headers: { 'Retry-After' => '5' } }, { status: 200 })
+      checker.max_rate_limit_delay = 0.05
+      elapsed = run_check
+      expect(elapsed).to be >= 0.05
+      expect(elapsed).to be < 1
+    end
+
+    it 'retries custom rate limit statuses' do
+      stub_request(:get, url).to_return({ status: 503 }, { status: 200 })
+      checker.rate_limit_status_codes = [503]
+      run_check
+      expect(checker.results[:success].size).to eq 1
+    end
+
+    context 'when disabled' do
+      let(:checker_options) { { methods: ['GET'], rate_limit_retries: 0 } }
+
+      it 'does not retry' do
+        stub_request(:get, url).to_return({ status: 429 }, { status: 200 })
+        run_check
+        expect(a_request(:get, url)).to have_been_made.once
+        expect(checker.results[:blocked].first.code).to eq 429
+      end
+    end
+  end
+
   context 'default' do
     subject do
       described_class.new
@@ -996,7 +1073,7 @@ shared_context 'a link checker' do
             }]
           } do
             subject do
-              described_class.new(methods: ['GET'], retries: 1)
+              described_class.new(methods: ['GET'], retries: 1, rate_limit_retries: 0)
             end
 
             it 'calls a retry callback' do
@@ -1012,7 +1089,7 @@ shared_context 'a link checker' do
 
           context 'a failed retry on a redirect', vcr: { cassette_name: '308+429', allow_playback_repeats: true } do
             subject do
-              described_class.new(methods: %w[HEAD], retries: 2)
+              described_class.new(methods: %w[HEAD], retries: 2, rate_limit_retries: 0)
             end
 
             it 'calls redirect callback' do
@@ -1079,7 +1156,7 @@ shared_context 'a link checker' do
             }]
           } do
             subject do
-              described_class.new(methods: %w[HEAD GET], retries: 1)
+              described_class.new(methods: %w[HEAD GET], retries: 1, rate_limit_retries: 0)
             end
 
             it 'executes HEAD twice, then falls back to GET' do
