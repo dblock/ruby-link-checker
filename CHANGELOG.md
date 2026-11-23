@@ -1,7 +1,6 @@
-### 0.6.1 (Next)
+### 0.6.1 (2026/11/23)
 
 * [#56](https://github.com/dblock/ruby-link-checker/pull/56): Fixed `host_headers` invalidating cached results for every URL; only URLs whose headers changed are rechecked - [@dblock](https://github.com/dblock).
-* Your contribution here.
 
 ### 0.6.0 (2026/11/22)
 
